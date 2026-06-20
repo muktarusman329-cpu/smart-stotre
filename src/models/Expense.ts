@@ -69,6 +69,7 @@ const ExpenseSchema = new Schema<IExpense>(
 
 ExpenseSchema.index({ date: -1 });
 ExpenseSchema.index({ category: 1 });
+ExpenseSchema.index({ description: 'text', category: 'text' });
 
 const Expense: Model<IExpense> = mongoose.models.Expense || mongoose.model<IExpense>('Expense', ExpenseSchema);
 

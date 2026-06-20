@@ -177,6 +177,7 @@ const OrderSchema = new Schema<IOrder>(
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ source: 1 });
+OrderSchema.index({ orderNumber: 'text', customerName: 'text', customerPhone: 'text' });
 
 const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 

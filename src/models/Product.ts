@@ -101,6 +101,7 @@ const ProductSchema = new Schema<IProduct>(
 
 ProductSchema.index({ expiryDate: 1 });
 ProductSchema.index({ stockQuantity: 1 });
+ProductSchema.index({ name: 'text', sku: 'text', barcode: 'text' });
 
 const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
 

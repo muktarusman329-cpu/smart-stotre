@@ -4,7 +4,8 @@ import connectDB from '@/lib/mongodb';
 import { Sale, Product, Customer, Transaction, Loyalty } from '@/models';
 import { generateCustomerId, generateTransactionId } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
-import { sendWhatsAppMessage, generateThankYouMessage } from '@/lib/whatsapp';
+import { sendWhatsAppMessage } from '@/lib/whatsapp';
+import { generateThankYouMessage } from '@/lib/whatsapp-utils';
 
 export async function searchProducts(query: string) {
   await connectDB();

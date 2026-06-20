@@ -1,3 +1,5 @@
+'use server';
+
 import connectDB from '@/lib/mongodb';
 import { WhatsAppMessage } from '@/models';
 
@@ -151,16 +153,6 @@ export async function sendWhatsAppMessage(params: SendWhatsAppMessageParams) {
       messageId: whatsappMessage._id,
     };
   }
-}
-
-export function generateThankYouMessage(
-  customerName: string,
-  amount: number
-): string {
-  return `Hello ${customerName},
-Thank you for shopping with Smart Store 🛒.
-Your purchase total was ${amount.toFixed(2)}.
-We appreciate your business and hope to see you again.`;
 }
 
 export async function getWhatsAppMessages(filters?: {

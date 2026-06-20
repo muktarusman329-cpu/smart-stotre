@@ -61,6 +61,8 @@ const WhatsAppMessageSchema = new Schema<IWhatsAppMessage>(
   }
 );
 
+WhatsAppMessageSchema.index({ customerName: 'text', customerPhone: 'text' });
+
 const WhatsAppMessage: Model<IWhatsAppMessage> = mongoose.models.WhatsAppMessage || mongoose.model<IWhatsAppMessage>('WhatsAppMessage', WhatsAppMessageSchema);
 
 export default WhatsAppMessage;
