@@ -1,11 +1,48 @@
+'use client';
+
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getWhatsAppMessages, getWhatsAppMessageStats } from '@/lib/whatsapp';
-import { MessageSquare, CheckCircle, XCircle, Clock, Search, Filter, Download } from 'lucide-react';
+import { MessageSquare, CheckCircle, XCircle, Clock, Search, Filter, Download, X } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
-export default async function WhatsAppMessagesPage() {
-  const messages = await getWhatsAppMessages();
-  const stats = await getWhatsAppMessageStats();
+export default function WhatsAppMessagesPage() {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>({ total: 0, sent: 0, failed: 0, successRate: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async (search?: string) => {
+    try {
+      setLoading(true);
+      const [messagesData, statsData] = await Promise.all([
+        getWhatsAppMessages(search ? { search } : undefined),
+        getWhatsAppMessageStats()
+      ]);
+      setMessages(messagesData);
+      setStats(statsData);
+    } catch (error) {
+      console.error('Error loading WhatsApp messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length > 0) {
+        loadData(searchQuery);
+      } else if (searchQuery.length === 0) {
+        loadData();
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
@@ -70,8 +107,18 @@ export default async function WhatsAppMessagesPage() {
             <input
               type="text"
               placeholder="Search messages by customer name or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all text-slate-900 dark:text-white font-semibold outline-none placeholder:text-slate-400"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <div className="flex gap-4">
@@ -88,27 +135,34 @@ export default async function WhatsAppMessagesPage() {
 
         {/* Messages Table */}
         <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-slate-800 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Customer</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Phone</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Message</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Amount</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Date</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {messages.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 dark:text-slate-400 font-semibold">
-                      No WhatsApp messages sent yet
-                    </td>
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent"></div>
+              <p className="mt-4 text-sm font-semibold text-slate-400">Loading WhatsApp messages...</p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="p-12 text-center">
+              <MessageSquare className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+              <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">No messages found</p>
+              <p className="text-sm font-semibold text-slate-400">
+                {searchQuery ? 'Try a different search term' : 'No WhatsApp messages sent yet'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Customer</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Phone</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Message</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Amount</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Date</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Status</th>
                   </tr>
-                ) : (
-                  messages.map((message: any) => (
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {messages.map((message: any) => (
                     <tr key={message._id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <td className="py-6 px-8">
                         <div className="flex items-center space-x-4">
@@ -167,11 +221,11 @@ export default async function WhatsAppMessagesPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
+                  ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

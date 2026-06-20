@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { DashboardHeader } from '@/components/dashboard-header';
 import {
@@ -32,7 +33,8 @@ interface Toast {
 const CART_KEY = 'smartmart-cart';
 
 export default function POSPage() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const searchParams = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -141,10 +143,19 @@ export default function POSPage() {
   // ── Product search ─────────────────────────────────────────────────────────
   const searchProducts = async (query: string) => {
     try {
+      console.log('Searching for:', query);
       const res = await fetch(`/api/pos/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
-      if (data.success) setSearchResults(data.data);
-    } catch { /* silent */ }
+      console.log('Search response:', data);
+      if (data.success) {
+        setSearchResults(data.data);
+        console.log('Found', data.data.length, 'products');
+      } else {
+        console.error('Search failed:', data.error);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    }
   };
 
   useEffect(() => {

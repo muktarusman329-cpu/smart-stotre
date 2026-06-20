@@ -1,11 +1,15 @@
+'use client';
+
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getExpenses } from '@/lib/actions/expenses';
-import { Plus, Search, Wallet, PieChart, TrendingDown, Edit, Trash2, Calendar, Tag } from 'lucide-react';
+import { Plus, Search, Wallet, PieChart, TrendingDown, Edit, Trash2, Calendar, Tag, X } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
-export default async function ExpensesPage() {
-  const expenses = await getExpenses();
-  const totalExpenses = expenses.reduce((sum: number, e: any) => sum + e.amount, 0);
+export default function ExpensesPage() {
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const categoryLabels = {
     rent: 'Rent & Utilities',
@@ -17,6 +21,36 @@ export default async function ExpensesPage() {
   };
 
   const categories = Object.keys(categoryLabels);
+
+  useEffect(() => {
+    loadExpenses();
+  }, []);
+
+  const loadExpenses = async (search?: string) => {
+    try {
+      setLoading(true);
+      const data = await getExpenses(search ? { search } : undefined);
+      setExpenses(data);
+    } catch (error) {
+      console.error('Error loading expenses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length > 0) {
+        loadExpenses(searchQuery);
+      } else if (searchQuery.length === 0) {
+        loadExpenses();
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const totalExpenses = expenses.reduce((sum: number, e: any) => sum + e.amount, 0);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
@@ -73,8 +107,18 @@ export default async function ExpensesPage() {
               <input
                 type="text"
                 placeholder="Search expenses..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all text-slate-900 dark:text-white font-semibold outline-none placeholder:text-slate-400"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <select className="px-6 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm outline-none focus:ring-2 focus:ring-blue-600/10 appearance-none">
               <option value="">All Categories</option>
@@ -92,20 +136,34 @@ export default async function ExpensesPage() {
 
         {/* Expenses Table */}
         <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-slate-800 overflow-hidden">
-          <div className="overflow-x-auto text-white">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Transaction Detail</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Category</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Amount</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Timestamp</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Reference</th>
-                  <th className="text-right py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {expenses.map((expense: any) => (
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+              <p className="mt-4 text-sm font-semibold text-slate-400">Loading expenses...</p>
+            </div>
+          ) : expenses.length === 0 ? (
+            <div className="p-12 text-center">
+              <Wallet className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+              <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">No expenses found</p>
+              <p className="text-sm font-semibold text-slate-400">
+                {searchQuery ? 'Try a different search term' : 'Add your first expense to get started'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Transaction Detail</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Category</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Amount</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Timestamp</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Reference</th>
+                    <th className="text-right py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {expenses.map((expense: any) => (
                   <tr key={expense._id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="py-6 px-8">
                       <div>
@@ -146,7 +204,8 @@ export default async function ExpensesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

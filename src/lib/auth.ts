@@ -2,9 +2,7 @@ import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import connectDB from "./mongodb"
 import { User } from "@/models"
-import { rateLimit, getClientIdentifier } from "./rate-limit"
-
-const authRateLimit = new Map<string, { count: number; resetTime: number }>()
+import { checkRateLimit, resetRateLimit } from "./auth-rate-limit"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -21,19 +19,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         // Rate limiting based on email
-        const now = Date.now()
         const email = credentials.email as string
-        const record = authRateLimit.get(email)
+        const rateLimitResult = checkRateLimit(email, 5, 15 * 60 * 1000) // 5 attempts, 15 minutes
         
-        if (record && now < record.resetTime && record.count >= 5) {
+        console.log(`Rate limit check for ${email}: allowed=${rateLimitResult.allowed}, remaining=${rateLimitResult.remaining}`)
+        
+        if (!rateLimitResult.allowed) {
           console.error('Rate limit exceeded for email:', email)
           throw new Error('Too many login attempts. Please try again later.')
-        }
-
-        if (!record || now >= record.resetTime) {
-          authRateLimit.set(email, { count: 1, resetTime: now + 15 * 60 * 1000 }) // 15 minutes
-        } else {
-          record.count++
         }
 
         try {
@@ -57,7 +50,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
 
           // Reset rate limit on successful login
-          authRateLimit.delete(email)
+          resetRateLimit(email)
 
           return {
             id: user._id.toString(),
@@ -98,5 +91,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
 })

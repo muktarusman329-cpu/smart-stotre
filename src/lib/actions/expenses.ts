@@ -8,6 +8,7 @@ export async function getExpenses(filters?: {
   category?: string;
   startDate?: Date;
   endDate?: Date;
+  search?: string;
 }) {
   await connectDB();
 
@@ -15,6 +16,13 @@ export async function getExpenses(filters?: {
 
   if (filters?.category) {
     query.category = filters.category;
+  }
+
+  if (filters?.search) {
+    query.$or = [
+      { description: { $regex: filters.search, $options: 'i' } },
+      { category: { $regex: filters.search, $options: 'i' } },
+    ];
   }
 
   if (filters?.startDate || filters?.endDate) {

@@ -1,14 +1,55 @@
+'use client';
+
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getProducts, getCategories, getLowStockProducts, getExpiringProducts } from '@/lib/actions/inventory';
-import { Plus, Search, Filter, AlertTriangle, Package, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, AlertTriangle, Package, Edit, Trash2, X } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
-export default async function InventoryPage() {
-  const products = await getProducts();
-  const categories = await getCategories();
-  const lowStockProducts = await getLowStockProducts();
-  const expiringProducts = await getExpiringProducts();
+export default function InventoryPage() {
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
+  const [expiringProducts, setExpiringProducts] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async (search?: string) => {
+    try {
+      setLoading(true);
+      const [productsData, categoriesData, lowStockData, expiringData] = await Promise.all([
+        getProducts(search ? { search } : undefined),
+        getCategories(),
+        getLowStockProducts(),
+        getExpiringProducts()
+      ]);
+      setProducts(productsData);
+      setCategories(categoriesData);
+      setLowStockProducts(lowStockData);
+      setExpiringProducts(expiringData);
+    } catch (error) {
+      console.error('Error loading inventory data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length > 0) {
+        loadData(searchQuery);
+      } else if (searchQuery.length === 0) {
+        loadData();
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
@@ -64,8 +105,18 @@ export default async function InventoryPage() {
               <input
                 type="text"
                 placeholder="Search products by name, SKU, or barcode..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 bg-card border border-border rounded-2xl shadow-sm focus:ring-4 focus:ring-ring/5 focus:border-primary transition-all text-foreground font-semibold outline-none placeholder:text-muted-foreground"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <button className="flex items-center space-x-2 px-6 py-4 bg-card border border-border rounded-2xl text-muted-foreground font-bold hover:bg-secondary transition-all shadow-sm">
               <Filter className="h-5 w-5" />
@@ -87,21 +138,35 @@ export default async function InventoryPage() {
 
         {/* Inventory Table */}
         <div className="bg-card rounded-[2.5rem] shadow-lg border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-secondary/50 border-b border-border">
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Product Details</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">SKU/Barcode</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Category</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Inventory</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Pricing</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Expiry</th>
-                  <th className="text-right py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {products.map((product: any) => (
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+              <p className="mt-4 text-sm font-semibold text-muted-foreground">Loading inventory...</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="p-12 text-center">
+              <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-bold text-foreground mb-2">No products found</p>
+              <p className="text-sm font-semibold text-muted-foreground">
+                {searchQuery ? 'Try a different search term' : 'Add your first product to get started'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-secondary/50 border-b border-border">
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Product Details</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">SKU/Barcode</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Category</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Inventory</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Pricing</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Expiry</th>
+                    <th className="text-right py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {products.map((product: any) => (
                   <tr key={product._id} className="group hover:bg-muted/50 transition-colors">
                     <td className="py-6 px-8">
                       <div className="flex items-center space-x-4">
@@ -175,7 +240,8 @@ export default async function InventoryPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

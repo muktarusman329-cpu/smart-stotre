@@ -1,11 +1,44 @@
+'use client';
+
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getCustomers } from '@/lib/actions/customers';
 import { Plus, Search, Mail, Phone, Award, Edit, Trash2, User } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
-export default async function CustomersPage() {
-  const customers = await getCustomers();
+export default function CustomersPage() {
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadCustomers();
+  }, []);
+
+  const loadCustomers = async (search?: string) => {
+    try {
+      setLoading(true);
+      const data = await getCustomers(search ? { search } : undefined);
+      setCustomers(data);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length > 0) {
+        loadCustomers(searchQuery);
+      } else if (searchQuery.length === 0) {
+        loadCustomers();
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
@@ -63,6 +96,8 @@ export default async function CustomersPage() {
             <input
               type="text"
               placeholder="Search customers by name, phone, or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all text-slate-900 dark:text-white font-semibold outline-none placeholder:text-slate-400"
             />
           </div>

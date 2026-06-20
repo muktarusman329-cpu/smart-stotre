@@ -1,10 +1,43 @@
+'use client';
+
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getSuppliers } from '@/lib/actions/suppliers';
 import { Plus, Search, Truck, Phone, Mail, Package, Edit, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
-export default async function SuppliersPage() {
-  const suppliers = await getSuppliers();
+export default function SuppliersPage() {
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSuppliers();
+  }, []);
+
+  const loadSuppliers = async (search?: string) => {
+    try {
+      setLoading(true);
+      const data = await getSuppliers(search ? { search } : undefined);
+      setSuppliers(data);
+    } catch (error) {
+      console.error('Error loading suppliers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length > 0) {
+        loadSuppliers(searchQuery);
+      } else if (searchQuery.length === 0) {
+        loadSuppliers();
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
@@ -62,6 +95,8 @@ export default async function SuppliersPage() {
             <input
               type="text"
               placeholder="Search suppliers by name, company, or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all text-slate-900 dark:text-white font-semibold outline-none placeholder:text-slate-400"
             />
           </div>

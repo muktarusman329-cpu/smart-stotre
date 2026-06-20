@@ -65,7 +65,7 @@ export async function seedDatabase() {
   const adminUser = await User.create({
     name: 'Admin User',
     email: 'admin@smartmart.com',
-    password: await bcrypt.hash('admin123', 10),
+    password: 'admin123',
     role: 'admin',
     phone: '+1 234 567 8901',
     branchId: branch._id,
@@ -75,7 +75,7 @@ export async function seedDatabase() {
   const managerUser = await User.create({
     name: 'Manager User',
     email: 'manager@smartmart.com',
-    password: await bcrypt.hash('manager123', 10),
+    password: 'manager123',
     role: 'manager',
     phone: '+1 234 567 8902',
     branchId: branch._id,
@@ -86,7 +86,7 @@ export async function seedDatabase() {
     {
       name: 'Cashier Sarah',
       email: 'sarah@smartmart.com',
-      password: await bcrypt.hash('cashier123', 10),
+      password: 'cashier123',
       role: 'cashier',
       phone: '+1 234 567 8903',
       branchId: branch._id,
@@ -95,7 +95,7 @@ export async function seedDatabase() {
     {
       name: 'Cashier Mike',
       email: 'mike@smartmart.com',
-      password: await bcrypt.hash('cashier123', 10),
+      password: 'cashier123',
       role: 'cashier',
       phone: '+1 234 567 8904',
       branchId: branch._id,
@@ -104,7 +104,7 @@ export async function seedDatabase() {
     {
       name: 'Cashier Emma',
       email: 'emma@smartmart.com',
-      password: await bcrypt.hash('cashier123', 10),
+      password: 'cashier123',
       role: 'cashier',
       phone: '+1 234 567 8905',
       branchId: branch._id,

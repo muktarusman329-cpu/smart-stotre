@@ -4,6 +4,7 @@ import { Bell, Search, User, Command, Sun, Moon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 
 interface DashboardHeaderProps {
   title: string;
@@ -16,6 +17,7 @@ export function DashboardHeader({ title, userRole }: DashboardHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -40,6 +42,13 @@ export function DashboardHeader({ title, userRole }: DashboardHeaderProps) {
     };
   }, []);
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/dashboard/pos?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
   return (
     <header className={`sticky top-0 z-30 transition-all duration-300 ${
       scrolled 
@@ -59,16 +68,16 @@ export function DashboardHeader({ title, userRole }: DashboardHeaderProps) {
 
         <div className="flex items-center space-x-6">
           {/* Search */}
-          <div className="relative hidden xl:block group">
+          <form onSubmit={handleSearch} className="relative hidden xl:block group">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <input
               type="text"
-              placeholder="Search everything..."
+              placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-11 pr-4 py-2.5 bg-secondary/50 border-none rounded-xl focus:ring-2 focus:ring-ring/10 focus:bg-background transition-all w-80 text-sm font-semibold outline-none text-foreground placeholder:text-muted-foreground"
             />
-          </div>
+          </form>
 
           <div className="flex items-center space-x-3 border-l border-border pl-6">
             {/* Theme Toggle */}

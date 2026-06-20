@@ -1,11 +1,16 @@
+'use client';
+
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getOrders } from '@/lib/actions/orders';
-import { MessageSquare, Clock, CheckCircle2, ShoppingBag, MoreVertical, Search, Filter } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle2, ShoppingBag, MoreVertical, Search, Filter, X } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
-export default async function WhatsAppOrdersPage() {
-  const orders = await getOrders('whatsapp');
+export default function WhatsAppOrdersPage() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const getStatusStyles = (status: string) => {
     switch (status) {
@@ -18,6 +23,34 @@ export default async function WhatsAppOrdersPage() {
       default: return 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800';
     }
   };
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async (search?: string) => {
+    try {
+      setLoading(true);
+      const data = await getOrders('whatsapp', search ? { search } : undefined);
+      setOrders(data);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length > 0) {
+        loadOrders(searchQuery);
+      } else if (searchQuery.length === 0) {
+        loadOrders();
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
@@ -42,8 +75,18 @@ export default async function WhatsAppOrdersPage() {
               <input
                 type="text"
                 placeholder="Search WhatsApp queue..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all text-slate-900 dark:text-white font-semibold outline-none placeholder:text-slate-400"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <button className="flex items-center space-x-2 px-6 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm">
               <Filter className="h-5 w-5" />
@@ -53,21 +96,35 @@ export default async function WhatsAppOrdersPage() {
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-slate-800 overflow-hidden">
-          <div className="overflow-x-auto text-white">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Transaction ID</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Sender Profile</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Procurement</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Net Value</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Payment</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Status</th>
-                  <th className="text-right py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {orders.map((order: any) => (
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent"></div>
+              <p className="mt-4 text-sm font-semibold text-slate-400">Loading WhatsApp orders...</p>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="p-12 text-center">
+              <MessageSquare className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+              <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">No WhatsApp orders found</p>
+              <p className="text-sm font-semibold text-slate-400">
+                {searchQuery ? 'Try a different search term' : 'No orders in the WhatsApp queue yet'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Transaction ID</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Sender Profile</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Procurement</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Net Value</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Payment</th>
+                    <th className="text-left py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Status</th>
+                    <th className="text-right py-6 px-8 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {orders.map((order: any) => (
                   <tr key={order._id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="py-6 px-8">
                       <span className="text-sm font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">#{order.orderNumber}</span>
@@ -117,15 +174,6 @@ export default async function WhatsAppOrdersPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-          
-          {orders.length === 0 && (
-            <div className="py-32 text-center">
-              <div className="h-24 w-24 bg-slate-50 dark:bg-slate-800 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6">
-                <MessageSquare className="h-10 w-10 text-slate-200 dark:text-slate-700" />
-              </div>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Zero Activity</h3>
-              <p className="text-slate-400 font-medium mt-2 max-w-xs mx-auto">No WhatsApp incoming transmissions detected in the current session.</p>
             </div>
           )}
         </div>

@@ -167,6 +167,7 @@ export async function getWhatsAppMessages(filters?: {
   status?: 'sent' | 'failed' | 'pending';
   customerId?: string;
   limit?: number;
+  search?: string;
 }) {
   await connectDB();
 
@@ -178,6 +179,13 @@ export async function getWhatsAppMessages(filters?: {
 
   if (filters?.customerId) {
     query.customerId = filters.customerId;
+  }
+
+  if (filters?.search) {
+    query.$or = [
+      { customerName: { $regex: filters.search, $options: 'i' } },
+      { customerPhone: { $regex: filters.search, $options: 'i' } },
+    ];
   }
 
   const messages = await WhatsAppMessage.find(query)
