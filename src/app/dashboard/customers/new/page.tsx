@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { Plus, User, Mail, Phone, MapPin, X, Award } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { createCustomer } from '@/lib/actions/customers';
 
 export default function NewCustomerPage() {

@@ -47,7 +47,7 @@ export async function sendWhatsAppMessage(params: SendWhatsAppMessageParams) {
   }
 
   // Check if WhatsApp API is configured
-  const apiKey = process.env.WHATSAPP_API_KEY;
+  const apiKey = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
   console.log('🔑 WhatsApp API Configuration:', {

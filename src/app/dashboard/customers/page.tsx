@@ -2,19 +2,26 @@
 
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getCustomers } from '@/lib/actions/customers';
-import { Plus, Search, Mail, Phone, Award, Edit, Trash2, User } from 'lucide-react';
+import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
+interface Customer {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  totalSpent: number;
+  loyaltyPoints: number;
+  visits: number;
+  lastVisit: string;
+}
+
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadCustomers();
-  }, []);
 
   const loadCustomers = async (search?: string) => {
     try {
@@ -27,6 +34,10 @@ export default function CustomersPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadCustomers();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -64,7 +75,7 @@ export default function CustomersPage() {
               <div>
                 <p className="text-[13px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Revenue</p>
                 <h3 className="text-3xl font-black text-slate-900 dark:text-white">
-                  {formatCurrency(customers.reduce((sum: number, c: any) => sum + c.totalSpent, 0))}
+                  {formatCurrency(customers.reduce((sum: number, c: Customer) => sum + c.totalSpent, 0))}
                 </h3>
                 <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-2">Lifetime value</p>
               </div>
@@ -78,7 +89,7 @@ export default function CustomersPage() {
               <div>
                 <p className="text-[13px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Loyalty Points</p>
                 <h3 className="text-3xl font-black text-slate-900 dark:text-white">
-                  {customers.reduce((sum: number, c: any) => sum + c.loyaltyPoints, 0)}
+                  {customers.reduce((sum: number, c: Customer) => sum + c.loyaltyPoints, 0)}
                 </h3>
                 <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-2">Reward pool</p>
               </div>
@@ -124,7 +135,7 @@ export default function CustomersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {customers.map((customer: any) => (
+                {customers.map((customer: Customer) => (
                   <tr key={customer._id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="py-6 px-8">
                       <div className="flex items-center space-x-4">

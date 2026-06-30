@@ -16,7 +16,12 @@ export function FloatingActionButton() {
   ];
 
   return (
-    <div className="fixed bottom-8 right-8 z-50">
+    <motion.div 
+      className="fixed bottom-8 right-8 z-50"
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.8 }}
+    >
       <AnimatePresence>
         {isOpen && (
           <div className="flex flex-col-reverse items-end mb-4 space-y-reverse space-y-4">
@@ -26,19 +31,39 @@ export function FloatingActionButton() {
                 initial={{ opacity: 0, scale: 0.5, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.5, y: 20 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ 
+                  delay: index * 0.08,
+                  type: 'spring',
+                  stiffness: 300,
+                  damping: 20
+                }}
               >
                 <Link
                   href={action.href}
                   onClick={() => setIsOpen(false)}
                   className="flex items-center group"
                 >
-                  <span className="mr-3 px-3 py-1 bg-card border border-border rounded-lg text-sm font-semibold text-foreground shadow-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                  <motion.span 
+                    className="mr-3 px-3 py-1 bg-card border border-border rounded-lg text-sm font-semibold text-foreground shadow-sm whitespace-nowrap"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
                     {action.label}
-                  </span>
-                  <div className={`${action.color} p-3 rounded-2xl text-white shadow-lg hover:scale-110 transition-transform active:scale-95`}>
+                  </motion.span>
+                  <motion.div 
+                    className={`${action.color} p-3 rounded-2xl text-white shadow-lg`}
+                    whileHover={{ 
+                      scale: 1.15,
+                      rotate: 5,
+                      boxShadow: '0 0 20px rgba(0,0,0,0.3)'
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <action.icon className="h-6 w-6" />
-                  </div>
+                  </motion.div>
                 </Link>
               </motion.div>
             ))}
@@ -48,17 +73,20 @@ export function FloatingActionButton() {
 
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={{ 
+          scale: 1.1,
+          boxShadow: '0 0 30px rgba(59, 130, 246, 0.5)'
+        }}
+        whileTap={{ scale: 0.9 }}
         className={`${isOpen ? 'bg-secondary' : 'bg-primary'} p-4 rounded-3xl text-primary-foreground shadow-2xl shadow-primary/20 flex items-center justify-center transition-colors`}
       >
         <motion.div
-          animate={{ rotate: isOpen ? 45 : 0 }}
+          animate={{ rotate: isOpen ? 135 : 0 }}
           transition={{ type: 'spring', stiffness: 200, damping: 15 }}
         >
           <Plus className="h-8 w-8" />
         </motion.div>
       </motion.button>
-    </div>
+    </motion.div>
   );
 }

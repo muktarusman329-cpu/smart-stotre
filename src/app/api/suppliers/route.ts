@@ -1,8 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupplier, getSuppliers } from '@/lib/actions/suppliers';
+import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/error-handler';
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting: 30 requests per minute per user/IP
+    const identifier = getClientIdentifier(request);
+    const rateLimitResult = rateLimit(identifier, 30, 60 * 1000);
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Too many requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+        },
+        { status: 429 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const filters = {
       search: searchParams.get('search') || undefined,
@@ -10,23 +27,40 @@ export async function GET(request: NextRequest) {
 
     const suppliers = await getSuppliers(filters);
     return NextResponse.json({ success: true, data: suppliers });
-  } catch (error: any) {
+  } catch (error) {
+    const errorResponse = handleApiError(error);
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: errorResponse.error },
+      { status: errorResponse.statusCode }
     );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 10 requests per minute per user/IP
+    const identifier = getClientIdentifier(request);
+    const rateLimitResult = rateLimit(identifier, 10, 60 * 1000);
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Too many requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+        },
+        { status: 429 }
+      );
+    }
+
     const data = await request.json();
     const supplier = await createSupplier(data);
     return NextResponse.json({ success: true, data: supplier });
-  } catch (error: any) {
+  } catch (error) {
+    const errorResponse = handleApiError(error);
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: errorResponse.error },
+      { status: errorResponse.statusCode }
     );
   }
 }

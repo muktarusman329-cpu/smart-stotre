@@ -33,10 +33,10 @@ export async function POST(request: NextRequest) {
       result,
       testMessage: 'If you see this, the API endpoint is working. Check console for detailed logs.',
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('🧪 Test WhatsApp API error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

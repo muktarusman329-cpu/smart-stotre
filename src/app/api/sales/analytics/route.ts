@@ -72,7 +72,7 @@ export async function GET(request: Request) {
     const salesChange = lastCount > 0 ? ((currentCount - lastCount) / lastCount) * 100 : 0;
 
     // Grouping for chart
-    const groupedData = currentSales.reduce((acc: any, sale) => {
+    const groupedData = currentSales.reduce((acc: Record<string, { name: string; revenue: number; sales: number; profit: number }>, sale) => {
       const date = new Date(sale.createdAt);
       let key: string;
       if (groupBy === 'hour') key = `${date.getHours()}:00`;
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
         chartData
       }
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }

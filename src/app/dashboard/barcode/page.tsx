@@ -5,14 +5,11 @@ import dynamic from 'next/dynamic';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { 
   Scan, 
-  Package, 
   Search, 
   AlertCircle, 
   Clock, 
-  Plus, 
   Check, 
   ShoppingCart, 
-  Trash2, 
   HelpCircle,
   Eye
 } from 'lucide-react';
@@ -47,7 +44,6 @@ interface CartItem {
 
 export default function BarcodeScannerPage() {
   const [scanning, setScanning] = useState(false);
-  const [lastScan, setLastScan] = useState<string | null>(null);
   const [scanHistory, setScanHistory] = useState<{ barcode: string; name: string; time: string }[]>([]);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +57,10 @@ export default function BarcodeScannerPage() {
     const history = sessionStorage.getItem('smartmart-scan-history');
     if (history) {
       try {
-        setScanHistory(JSON.parse(history));
+        // Use setTimeout to avoid synchronous setState in effect
+        setTimeout(() => {
+          setScanHistory(JSON.parse(history));
+        }, 0);
       } catch (e) {
         console.error(e);
       }
@@ -93,12 +92,10 @@ export default function BarcodeScannerPage() {
 
       if (result.success && result.data) {
         setProduct(result.data);
-        setLastScan(barcode);
         saveToHistory(barcode, result.data.name);
         setScanning(false); // Stop camera on successful resolution
       } else {
         setError(`Product not found for barcode: "${barcode}"`);
-        setLastScan(barcode);
         saveToHistory(barcode, 'Product Not Found');
         setScanning(false); // Stop camera on error
       }

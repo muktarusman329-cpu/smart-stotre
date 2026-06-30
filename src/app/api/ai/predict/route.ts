@@ -7,9 +7,9 @@ export async function POST(request: NextRequest) {
     const prediction = await predictSales(productId, days);
 
     return NextResponse.json({ success: true, data: prediction });
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

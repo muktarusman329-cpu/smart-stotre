@@ -16,6 +16,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SmartMart Pro - AI Supermarket Management",
   description: "Advanced supermarket ERP with AI insights",
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -29,7 +34,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-300">
+      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-300" suppressHydrationWarning>
         <ThemeProvider>
           {children}
         </ThemeProvider>

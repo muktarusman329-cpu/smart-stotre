@@ -1,24 +1,65 @@
 import { NextRequest } from 'next/server';
+import fs from 'fs';
+import path from 'path';
+
+const RATE_LIMIT_FILE = path.join(process.cwd(), '.api-rate-limit.json');
 
 interface RateLimitStore {
   count: number;
   resetTime: number;
 }
 
-const rateLimitStore = new Map<string, RateLimitStore>();
+interface RateLimitData {
+  [identifier: string]: RateLimitStore;
+}
+
+function readRateLimitData(): RateLimitData {
+  try {
+    if (fs.existsSync(RATE_LIMIT_FILE)) {
+      const data = fs.readFileSync(RATE_LIMIT_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error reading rate limit data:', error);
+  }
+  return {};
+}
+
+function writeRateLimitData(data: RateLimitData) {
+  try {
+    fs.writeFileSync(RATE_LIMIT_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Error writing rate limit data:', error);
+  }
+}
+
+function cleanupExpiredEntries(data: RateLimitData): RateLimitData {
+  const now = Date.now();
+  const cleaned: RateLimitData = {};
+  
+  for (const [identifier, record] of Object.entries(data)) {
+    if (now < record.resetTime) {
+      cleaned[identifier] = record;
+    }
+  }
+  
+  return cleaned;
+}
 
 export function rateLimit(
   identifier: string,
   limit: number = 5,
   windowMs: number = 60000 // 1 minute default
 ): { success: boolean; remaining: number; resetTime: number } {
+  const data = cleanupExpiredEntries(readRateLimitData());
   const now = Date.now();
-  const record = rateLimitStore.get(identifier);
+  const record = data[identifier];
 
-  if (!record || now > record.resetTime) {
+  if (!record || now >= record.resetTime) {
     // Create new record or reset expired one
     const resetTime = now + windowMs;
-    rateLimitStore.set(identifier, { count: 1, resetTime });
+    data[identifier] = { count: 1, resetTime };
+    writeRateLimitData(data);
     return { success: true, remaining: limit - 1, resetTime };
   }
 
@@ -27,6 +68,7 @@ export function rateLimit(
   }
 
   record.count++;
+  writeRateLimitData(data);
   return { success: true, remaining: limit - record.count, resetTime: record.resetTime };
 }
 
@@ -41,12 +83,8 @@ export function getClientIdentifier(request: NextRequest): string {
   return `${ip}-${userAgent}`;
 }
 
-// Clean up expired entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, record] of rateLimitStore.entries()) {
-    if (now > record.resetTime) {
-      rateLimitStore.delete(key);
-    }
-  }
-}, 60000); // Clean up every minute
+export function resetRateLimit(identifier: string) {
+  const data = readRateLimitData();
+  delete data[identifier];
+  writeRateLimitData(data);
+}

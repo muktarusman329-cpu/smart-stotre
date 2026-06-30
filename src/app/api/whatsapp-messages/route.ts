@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const customerId = searchParams.get('customerId');
     const limit = searchParams.get('limit');
 
-    const filters: any = {};
+    const filters: { status?: 'sent' | 'failed' | 'pending'; customerId?: string; limit?: number } = {};
     if (status) filters.status = status;
     if (customerId) filters.customerId = customerId;
     if (limit) filters.limit = parseInt(limit);
@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
       data: messages,
       stats,
     });
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

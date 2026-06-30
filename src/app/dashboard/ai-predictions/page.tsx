@@ -2,13 +2,19 @@
 
 import { useState } from 'react';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { TrendingUp, BarChart3, Calendar, Target, DollarSign } from 'lucide-react';
+import { TrendingUp, BarChart3, Calendar, Target } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+
+interface Prediction {
+  predictedSales: number;
+  predictedRevenue: number;
+  confidence: number;
+}
 
 export default function AIPredictionsPage() {
   const [productId, setProductId] = useState('');
   const [days, setDays] = useState(30);
-  const [prediction, setPrediction] = useState<any>(null);
+  const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handlePredict = async () => {
@@ -117,7 +123,7 @@ export default function AIPredictionsPage() {
                   <div className="flex flex-col items-center text-center">
                     <Target className="h-10 w-10 text-purple-600 dark:text-purple-400 mb-4" />
                     <p className="text-[11px] font-black text-purple-600/60 dark:text-purple-400/60 uppercase tracking-widest mb-1">Confidence</p>
-                    <p className="text-3xl font-black text-slate-900 dark:text-white">{prediction.confidenceScore || prediction.confidence}%</p>
+                    <p className="text-3xl font-black text-slate-900 dark:text-white">{prediction.confidence}%</p>
                   </div>
                 </div>
               </div>

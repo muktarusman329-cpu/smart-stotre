@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
 
     const notifications = await getNotifications(filters);
     return NextResponse.json({ success: true, data: notifications });
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     const notification = await createNotification(data);
     return NextResponse.json({ success: true, data: notification });
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

@@ -3,8 +3,32 @@ import { getCustomerAnalytics } from '@/lib/actions/customers';
 import { TrendingUp, Users, DollarSign, Award, Repeat, Clock } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
+interface Customer {
+  _id: string;
+  name: string;
+  phone: string;
+  totalSpent: number;
+  purchaseCount: number;
+}
+
+interface LoyaltyLevel {
+  name: string;
+  count: number;
+  percentage: number;
+}
+
+interface Analytics {
+  totalCustomers: number;
+  totalRevenue: number;
+  averagePurchaseValue: number;
+  customerRetentionRate: number;
+  topSpenders: Customer[];
+  frequentCustomers: Customer[];
+  loyaltyLevels: LoyaltyLevel[];
+}
+
 export default async function CustomerAnalyticsPage() {
-  const analytics = await getCustomerAnalytics();
+  const analytics = await getCustomerAnalytics() as Analytics;
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
@@ -75,7 +99,7 @@ export default async function CustomerAnalyticsPage() {
               <p className="text-sm text-muted-foreground mt-1">Highest lifetime value</p>
             </div>
             <div className="divide-y divide-border">
-              {analytics.topSpenders.slice(0, 5).map((customer: any, index: number) => (
+              {analytics.topSpenders.slice(0, 5).map((customer: Customer, index: number) => (
                 <div key={customer._id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
                   <div className="flex items-center space-x-3">
                     <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center text-sm font-black text-primary">
@@ -102,7 +126,7 @@ export default async function CustomerAnalyticsPage() {
               <p className="text-sm text-muted-foreground mt-1">Highest purchase count</p>
             </div>
             <div className="divide-y divide-border">
-              {analytics.frequentCustomers.slice(0, 5).map((customer: any, index: number) => (
+              {analytics.frequentCustomers.slice(0, 5).map((customer: Customer, index: number) => (
                 <div key={customer._id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
                   <div className="flex items-center space-x-3">
                     <div className="h-10 w-10 bg-emerald-500/10 rounded-full flex items-center justify-center text-sm font-black text-emerald-500">
@@ -160,7 +184,7 @@ export default async function CustomerAnalyticsPage() {
         <div className="bg-card rounded-2xl shadow-lg border border-border p-6">
           <h3 className="text-lg font-black text-foreground uppercase mb-6">Loyalty Levels Distribution</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {analytics.loyaltyLevels.map((level: any) => (
+            {analytics.loyaltyLevels.map((level: LoyaltyLevel) => (
               <div key={level.name} className="p-6 bg-secondary/50 rounded-xl border border-border">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-bold text-foreground capitalize">{level.name}</h4>

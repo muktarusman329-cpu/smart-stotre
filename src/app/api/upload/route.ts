@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadImage } from '@/lib/cloudinary';
 import { auth } from '@/lib/auth';
+import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/error-handler';
 
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 10 uploads per minute per user/IP
+    const identifier = getClientIdentifier(request);
+    const rateLimitResult = rateLimit(identifier, 10, 60 * 1000);
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Too many upload attempts. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+        },
+        { status: 429 }
+      );
+    }
+
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -48,10 +64,11 @@ export async function POST(request: NextRequest) {
       success: true,
       data: result,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorResponse = handleApiError(error);
     return NextResponse.json(
-      { error: error.message || 'Failed to upload image' },
-      { status: 500 }
+      { error: errorResponse.error },
+      { status: errorResponse.statusCode }
     );
   }
 }

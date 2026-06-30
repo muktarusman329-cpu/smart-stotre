@@ -21,7 +21,7 @@ import {
   ChevronRight,
   Layers
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -33,6 +33,14 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLargeScreen, setIsLargeScreen] = useState(true);
+
+  useEffect(() => {
+    const checkScreenSize = () => setIsLargeScreen(window.innerWidth >= 1024);
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   const navigation = [
     { name: 'Executive Overview', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'cashier'] },
@@ -69,11 +77,22 @@ export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) 
             : "text-muted-foreground hover:bg-accent hover:text-primary"
         )}
       >
-        <item.icon className={cn(
-          "mr-3 h-5 w-5 transition-transform duration-300 group-hover:scale-110",
-          isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary"
-        )} />
-        <span className="flex-1 tracking-tight">{item.name}</span>
+        <motion.div
+          whileHover={{ scale: 1.2, rotate: 5 }}
+          transition={{ duration: 0.2 }}
+        >
+          <item.icon className={cn(
+            "mr-3 h-5 w-5 transition-transform duration-300",
+            isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary"
+          )} />
+        </motion.div>
+        <motion.span 
+          className="flex-1 tracking-tight"
+          whileHover={{ x: 5 }}
+          transition={{ duration: 0.2 }}
+        >
+          {item.name}
+        </motion.span>
         {isActive && (
           <motion.div
             layoutId="active-pill"
@@ -81,10 +100,19 @@ export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) 
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
         )}
-        <ChevronRight className={cn(
-          "h-4 w-4 opacity-0 transition-all duration-300 transform translate-x-2 group-hover:opacity-40 group-hover:translate-x-0",
-          isActive && "hidden"
-        )} />
+        <motion.div
+          className={cn(
+            "h-4 w-4 opacity-0 transition-all duration-300 transform translate-x-2",
+            isActive && "hidden"
+          )}
+          whileHover={{ 
+            opacity: 0.4, 
+            translateX: 0,
+            scale: 1.2
+          }}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </motion.div>
       </Link>
     );
   };
@@ -113,50 +141,108 @@ export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) 
       </AnimatePresence>
 
       {/* Main Sidebar Container */}
-      <aside
+      <motion.aside
+        initial={{ x: -300, opacity: 0 }}
+        animate={{ x: isOpen ? 0 : (isLargeScreen ? 0 : -300), opacity: 1 }}
+        transition={{ duration: 0.4 }}
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-72 bg-card border-r border-border transform transition-transform duration-500 ease-in-out lg:translate-x-0",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-40 w-72 bg-card border-r border-border lg:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         <div className="flex flex-col h-full p-6">
           {/* Brand Identity */}
-          <div className="flex items-center px-2 mb-10">
-            <div className="h-10 w-10 bg-primary rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-primary/20">
-              <Store className="h-6 w-6 text-primary-foreground" />
-            </div>
+          <motion.div 
+            className="flex items-center px-2 mb-10"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+          >
+            <motion.div 
+              className="h-12 w-12 mr-3"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              transition={{ duration: 0.3 }}
+            >
+              <img src="/logo.svg" alt="SmartMart Logo" className="h-full w-full" />
+            </motion.div>
             <div>
               <h1 className="text-xl font-black text-foreground tracking-tighter uppercase leading-none">SmartMart</h1>
               <p className="text-[10px] font-black text-primary tracking-[0.3em] uppercase mt-0.5">Enterprise</p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Navigation Engine */}
           <div className="flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
-            <div className="space-y-1">
-              {filteredNavigation.map((item) => (
-                <NavItem key={item.name} item={item} />
+            <motion.div 
+              className="space-y-1"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.05
+                  }
+                }
+              }}
+            >
+              {filteredNavigation.map((item, index) => (
+                <motion.div
+                  key={item.name}
+                  variants={{
+                    hidden: { opacity: 0, x: -20 },
+                    visible: { opacity: 1, x: 0 }
+                  }}
+                  transition={{ duration: 0.3, delay: index * 0.03 }}
+                >
+                  <NavItem item={item} />
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
 
           {/* User Control Node */}
-          <div className="mt-6 pt-6 border-t border-border">
-            <div className="flex items-center p-3 bg-secondary/50 rounded-xl border border-transparent hover:border-border transition-all cursor-pointer group">
+          <motion.div 
+            className="mt-6 pt-6 border-t border-border"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
+          >
+            <motion.div 
+              className="flex items-center p-3 bg-secondary/50 rounded-xl border border-transparent hover:border-border transition-all cursor-pointer group"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
               <div className="relative mr-3 flex-shrink-0">
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary-700 flex items-center justify-center text-primary-foreground font-black text-lg shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
+                <motion.div 
+                  className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary-700 flex items-center justify-center text-primary-foreground font-black text-lg shadow-lg shadow-primary/20"
+                  whileHover={{ rotate: 360, scale: 1.1 }}
+                  transition={{ duration: 0.5 }}
+                >
                   {(userName || userRole).charAt(0).toUpperCase()}
-                </div>
-                <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-emerald-500 border-2 border-card rounded-full" />
+                </motion.div>
+                <motion.div 
+                  className="absolute -bottom-1 -right-1 h-4 w-4 bg-emerald-500 border-2 border-card rounded-full"
+                  animate={{ 
+                    scale: [1, 1.2, 1],
+                    opacity: [1, 0.7, 1]
+                  }}
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity,
+                    ease: "easeInOut" 
+                  }}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-black text-foreground truncate uppercase tracking-tight">{userName || 'Administrator'}</p>
                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{userRole}</p>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
-      </aside>
+      </motion.aside>
     </>
   );
 }

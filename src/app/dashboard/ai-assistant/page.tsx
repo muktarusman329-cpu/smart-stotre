@@ -70,7 +70,7 @@ export default function AIAssistantPage() {
         setMessages(prev => [...prev, errorMessage]);
         setError(data.error);
       }
-    } catch (error) {
+    } catch (_error) {
       const errorMessage: Message = {
         role: 'assistant',
         content: 'Network error: Unable to connect to AI service. Please check your internet connection and try again.',

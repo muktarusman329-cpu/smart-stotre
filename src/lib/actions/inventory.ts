@@ -11,7 +11,11 @@ export async function getProducts(filters?: {
   lowStock?: boolean;
   expiring?: boolean;
 }) {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    return [];
+  }
 
   const query: any = { isActive: true };
 
@@ -45,7 +49,11 @@ export async function getProducts(filters?: {
 }
 
 export async function getProductById(id: string) {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    return null;
+  }
 
   const product = await Product.findById(id)
     .populate('categoryId', 'name')
@@ -55,7 +63,11 @@ export async function getProductById(id: string) {
 }
 
 export async function createProduct(data: any) {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    throw new Error('Database not connected');
+  }
 
   const sku = data.sku || generateSKU();
   const barcode = data.barcode || generateBarcode();
@@ -71,7 +83,11 @@ export async function createProduct(data: any) {
 }
 
 export async function updateProduct(id: string, data: any) {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    throw new Error('Database not connected');
+  }
 
   const product = await Product.findByIdAndUpdate(
     id,
@@ -84,7 +100,11 @@ export async function updateProduct(id: string, data: any) {
 }
 
 export async function deleteProduct(id: string) {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    throw new Error('Database not connected');
+  }
 
   await Product.findByIdAndUpdate(id, { isActive: false });
 
@@ -93,7 +113,11 @@ export async function deleteProduct(id: string) {
 }
 
 export async function updateStock(id: string, quantity: number, operation: 'add' | 'subtract') {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    throw new Error('Database not connected');
+  }
 
   const product = await Product.findById(id);
 
@@ -129,7 +153,11 @@ export async function updateStock(id: string, quantity: number, operation: 'add'
 }
 
 export async function getCategories() {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    return [];
+  }
 
   const categories = await Category.find({ isActive: true }).sort({ name: 1 });
 
@@ -137,7 +165,11 @@ export async function getCategories() {
 }
 
 export async function createCategory(data: any) {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    throw new Error('Database not connected');
+  }
 
   const category = await Category.create(data);
 
@@ -146,7 +178,11 @@ export async function createCategory(data: any) {
 }
 
 export async function updateCategory(id: string, data: any) {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    throw new Error('Database not connected');
+  }
 
   const category = await Category.findByIdAndUpdate(
     id,
@@ -159,7 +195,11 @@ export async function updateCategory(id: string, data: any) {
 }
 
 export async function deleteCategory(id: string) {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    throw new Error('Database not connected');
+  }
 
   await Category.findByIdAndUpdate(id, { isActive: false });
 
@@ -168,7 +208,11 @@ export async function deleteCategory(id: string) {
 }
 
 export async function getLowStockProducts() {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    return [];
+  }
 
   const products = await Product.find({
     isActive: true,
@@ -181,7 +225,11 @@ export async function getLowStockProducts() {
 }
 
 export async function getExpiringProducts() {
-  await connectDB();
+  const db = await connectDB();
+  
+  if (!db) {
+    return [];
+  }
 
   const fifteenDaysFromNow = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 

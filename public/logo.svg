@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+
+    <!-- Chart/Arrow Gradient -->
+    <linearGradient id="accent-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#34D399" />
+    </linearGradient>
+
+    <!-- Icon Gloss/Shadow Effect -->
+    <linearGradient id="gloss-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.0" />
+    </linearGradient>
+  </defs>
+
+  <!-- iOS/Android Style Squircle App Base -->
+  <rect width="512" height="512" rx="115" fill="url(#bg-grad)" />
+  
+  <!-- Subtle top-half gloss overlay for app-icon depth -->
+  <path d="M 0,115 C 0,51 51,0 115,0 L 397,0 C 461,0 512,51 512,115 L 512,256 L 0,256 Z" fill="url(#gloss-grad)" />
+
+  <!-- MAIN EMBLEM: Shopping Cart + Management Data -->
+  <g transform="translate(20, 10)">
+    
+    <!-- Data Bars (Inventory / Analytics) inside the cart -->
+    <rect x="200" y="230" width="22" height="60" rx="6" fill="#38BDF8" />
+    <rect x="240" y="190" width="22" height="100" rx="6" fill="url(#accent-grad)" />
+    <rect x="280" y="150" width="22" height="140" rx="6" fill="url(#accent-grad)" />
+
+    <!-- The Smart Management Arrow (Breaks out of the cart) -->
+    <path d="M 130,240 L 210,240 L 320,110 L 280,110 L 350,80 L 360,150 L 335,125 Z" fill="#FFFFFF" />
+    
+    <!-- Shopping Cart Wireframe Structure -->
+    <path d="M 110,130 
+             L 145,130 
+             L 185,280 
+             L 325,280 
+             L 355,160 
+             M 160,185 
+             L 343,185" 
+          stroke="#FFFFFF" 
+          stroke-width="20" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" 
+          fill="none" />
+
+    <!-- Cart Wheels -->
+    <circle cx="200" cy="325" r="18" fill="url(#accent-grad)" />
+    <circle cx="310" cy="325" r="18" fill="url(#accent-grad)" />
+    
+  </g>
+
+  <!-- APP TEXT: Clean, Modern Sans-Serif -->
+  <text x="256" y="420" 
+        text-anchor="middle" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-weight="800" 
+        font-size="42" 
+        fill="#FFFFFF" 
+        letter-spacing="2">SMART MART</text>
+        
+  <text x="256" y="455" 
+        text-anchor="middle" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-weight="600" 
+        font-size="16" 
+        fill="#38BDF8" 
+        letter-spacing="5">MANAGEMENT SYSTEM</text>
+
+</svg>

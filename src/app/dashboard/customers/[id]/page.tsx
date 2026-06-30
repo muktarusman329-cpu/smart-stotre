@@ -1,12 +1,21 @@
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getCustomerById, getCustomerPurchaseHistory } from '@/lib/actions/customers';
-import { ArrowLeft, Phone, Mail, Calendar, ShoppingBag, Award, DollarSign, MapPin, User } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, Calendar, ShoppingBag, Award, DollarSign, MapPin } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 
+interface Purchase {
+  _id: string;
+  saleNumber: string;
+  date: string;
+  total: number;
+  paymentMethod: string;
+  cashier: string;
+}
+
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
   const customer = await getCustomerById(params.id);
-  const purchaseHistory = await getCustomerPurchaseHistory(params.id);
+  const purchaseHistory = await getCustomerPurchaseHistory(params.id) as Purchase[];
 
   if (!customer) {
     return (
@@ -163,7 +172,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {purchaseHistory.map((sale: any) => (
+                  {purchaseHistory.map((sale: Purchase) => (
                     <tr key={sale._id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <td className="py-6 px-8">
                         <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">

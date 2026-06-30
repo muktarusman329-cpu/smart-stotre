@@ -24,8 +24,8 @@ const optionalVars = [
 
 console.log('🔍 Checking Environment Variables...\n');
 
-let missingRequired: string[] = [];
-let missingOptional: string[] = [];
+const missingRequired: string[] = [];
+const missingOptional: string[] = [];
 
 // Check required variables
 console.log('Required Variables:');

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 
 interface DashboardHeaderProps {
   title: string;
@@ -50,67 +51,128 @@ export function DashboardHeader({ title, userRole }: DashboardHeaderProps) {
   };
 
   return (
-    <header className={`sticky top-0 z-30 transition-all duration-300 ${
-      scrolled 
-        ? 'bg-background/80 backdrop-blur-xl border-b border-border/50 py-3 shadow-sm' 
-        : 'bg-transparent py-6'
-    } px-8`}>
+    <motion.header
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className={`sticky top-0 z-30 transition-all duration-300 ${
+        scrolled 
+          ? 'bg-background/80 backdrop-blur-xl border-b border-border/50 py-3 shadow-sm' 
+          : 'bg-transparent py-6'
+      } px-8`}
+    >
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="p-2 bg-primary rounded-xl lg:hidden">
+        <motion.div 
+          className="flex items-center space-x-4"
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <motion.div 
+            className="p-2 bg-primary rounded-xl lg:hidden"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            whileTap={{ scale: 0.95 }}
+          >
             <Command className="h-5 w-5 text-primary-foreground" />
-          </div>
+          </motion.div>
           <div>
-            <h1 className="text-2xl font-black text-foreground tracking-tight">{title}</h1>
-            <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-widest mt-0.5">Terminal 01 • Active</p>
+            <motion.h1 
+              className="text-2xl font-black text-foreground tracking-tight"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              {title}
+            </motion.h1>
+            <motion.p 
+              className="text-[12px] font-medium text-muted-foreground uppercase tracking-widest mt-0.5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              Terminal 01 • Active
+            </motion.p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="flex items-center space-x-6">
+        <motion.div 
+          className="flex items-center space-x-6"
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
           {/* Search */}
-          <form onSubmit={handleSearch} className="relative hidden xl:block group">
+          <motion.form 
+            onSubmit={handleSearch} 
+            className="relative hidden xl:block group"
+            whileFocus={{ scale: 1.02 }}
+          >
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <input
+            <motion.input
               type="text"
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-11 pr-4 py-2.5 bg-secondary/50 border-none rounded-xl focus:ring-2 focus:ring-ring/10 focus:bg-background transition-all w-80 text-sm font-semibold outline-none text-foreground placeholder:text-muted-foreground"
+              whileFocus={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
             />
-          </form>
+          </motion.form>
 
           <div className="flex items-center space-x-3 border-l border-border pl-6">
             {/* Theme Toggle */}
-            <button
+            <motion.button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2.5 text-muted-foreground hover:bg-accent rounded-xl transition-all active:scale-90"
+              className="p-2.5 text-muted-foreground hover:bg-accent rounded-xl transition-all"
+              whileHover={{ scale: 1.1, rotate: 180 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ duration: 0.3 }}
             >
               {mounted && theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
+            </motion.button>
 
             {/* Notifications */}
-            <Link href="/dashboard/notifications" className="relative p-2.5 text-muted-foreground hover:bg-accent rounded-xl transition-all active:scale-90">
-              <Bell className="h-5 w-5" />
+            <Link href="/dashboard/notifications" className="relative">
+              <motion.div 
+                className="p-2.5 text-muted-foreground hover:bg-accent rounded-xl transition-all"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Bell className="h-5 w-5" />
+              </motion.div>
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 h-5 w-5 bg-destructive text-destructive-foreground text-[10px] font-black flex items-center justify-center rounded-full border-[3px] border-background ring-1 ring-destructive/20">
+                <motion.span 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                  className="absolute top-1 right-1 h-5 w-5 bg-destructive text-destructive-foreground text-[10px] font-black flex items-center justify-center rounded-full border-[3px] border-background ring-1 ring-destructive/20"
+                >
                   {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
+                </motion.span>
               )}
             </Link>
 
             {/* User menu */}
-            <div className="flex items-center space-x-3 p-1.5 pr-4 bg-secondary/50 rounded-xl hover:bg-secondary transition-colors cursor-pointer group">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-primary-700 flex items-center justify-center text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
+            <motion.div 
+              className="flex items-center space-x-3 p-1.5 pr-4 bg-secondary/50 rounded-xl hover:bg-secondary transition-colors cursor-pointer group"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <motion.div 
+                className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-primary-700 flex items-center justify-center text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20"
+                whileHover={{ rotate: 360, scale: 1.1 }}
+                transition={{ duration: 0.5 }}
+              >
                 {userRole.charAt(0).toUpperCase()}
-              </div>
+              </motion.div>
               <div className="hidden md:block">
                 <p className="text-xs font-bold text-foreground leading-none">{userRole.toUpperCase()}</p>
                 <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-500 mt-1 uppercase tracking-tighter">Verified</p>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </header>
+    </motion.header>
   );
 }

@@ -2,8 +2,17 @@ import { DashboardHeader } from '@/components/dashboard-header';
 import { getBranches } from '@/lib/actions/branches';
 import { Plus, MapPin, Phone, Mail, Settings, Edit, Trash2, Globe } from 'lucide-react';
 
+interface Branch {
+  _id: string;
+  name: string;
+  location: string;
+  phone: string;
+  email: string;
+  status: string;
+}
+
 export default async function BranchesPage() {
-  const branches = await getBranches();
+  const branches = await getBranches() as Branch[];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
@@ -22,7 +31,7 @@ export default async function BranchesPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-white">
-          {branches.map((branch: any) => (
+          {branches.map((branch: Branch) => (
             <div key={branch._id} className="group bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-slate-800 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
               <div className="p-8">
                 <div className="flex justify-between items-start mb-6">
