@@ -2,7 +2,7 @@
 
 import connectDB from '@/lib/mongodb';
 import { Sale, Product, Customer, Transaction, Loyalty } from '@/models';
-import { generateCustomerId, generateTransactionId } from '@/lib/utils';
+import { generateCustomerId, generateTransactionId, escapeRegex } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { generateThankYouMessage } from '@/lib/whatsapp-utils';
@@ -10,12 +10,13 @@ import { generateThankYouMessage } from '@/lib/whatsapp-utils';
 export async function searchProducts(query: string) {
   await connectDB();
 
+  const safeQuery = escapeRegex(query);
   const products = await Product.find({
     isActive: true,
     $or: [
-      { name: { $regex: query, $options: 'i' } },
-      { sku: { $regex: query, $options: 'i' } },
-      { barcode: { $regex: query, $options: 'i' } },
+      { name: { $regex: safeQuery, $options: 'i' } },
+      { sku: { $regex: safeQuery, $options: 'i' } },
+      { barcode: { $regex: safeQuery, $options: 'i' } },
     ],
   })
     .populate('categoryId', 'name')

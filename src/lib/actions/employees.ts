@@ -3,6 +3,7 @@
 import connectDB from '@/lib/mongodb';
 import { Employee, User } from '@/models';
 import { revalidatePath } from 'next/cache';
+import { escapeRegex } from '@/lib/utils';
 
 export async function getEmployees(filters?: {
   search?: string;
@@ -13,9 +14,10 @@ export async function getEmployees(filters?: {
   const query: any = { isActive: true };
 
   if (filters?.search) {
+    const safeSearch = escapeRegex(filters.search);
     query.$or = [
-      { position: { $regex: filters.search, $options: 'i' } },
-      { department: { $regex: filters.search, $options: 'i' } },
+      { position: { $regex: safeSearch, $options: 'i' } },
+      { department: { $regex: safeSearch, $options: 'i' } },
     ];
   }
 

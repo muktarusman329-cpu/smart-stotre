@@ -21,9 +21,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Rate limiting based on email
         const email = credentials.email as string
         const rateLimitResult = checkRateLimit(email, 5, 15 * 60 * 1000) // 5 attempts, 15 minutes
-        
-        console.log(`Rate limit check for ${email}: allowed=${rateLimitResult.allowed}, remaining=${rateLimitResult.remaining}`)
-        
+
         if (!rateLimitResult.allowed) {
           console.error('Rate limit exceeded for email:', email)
           throw new Error('Too many login attempts. Please try again later.')
@@ -31,10 +29,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         try {
           await connectDB()
-          console.log('Database connected')
-
           const user = await User.findOne({ email: credentials.email as string }).select('+password')
-          console.log('User found:', !!user)
 
           if (!user || !user.isActive) {
             console.error('User not found or inactive')
@@ -42,7 +37,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
 
           const isPasswordValid = await user.comparePassword(credentials.password as string)
-          console.log('Password valid:', isPasswordValid)
 
           if (!isPasswordValid) {
             console.error('Invalid password')
@@ -91,5 +85,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
+  secret: process.env.NEXTAUTH_SECRET,
 })

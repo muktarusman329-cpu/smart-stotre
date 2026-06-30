@@ -2,6 +2,7 @@
 
 import connectDB from '@/lib/mongodb';
 import { WhatsAppMessage } from '@/models';
+import { escapeRegex } from '@/lib/utils';
 
 interface SendWhatsAppMessageParams {
   customerId?: string;
@@ -174,9 +175,10 @@ export async function getWhatsAppMessages(filters?: {
   }
 
   if (filters?.search) {
+    const safeSearch = escapeRegex(filters.search);
     query.$or = [
-      { customerName: { $regex: filters.search, $options: 'i' } },
-      { customerPhone: { $regex: filters.search, $options: 'i' } },
+      { customerName: { $regex: safeSearch, $options: 'i' } },
+      { customerPhone: { $regex: safeSearch, $options: 'i' } },
     ];
   }
 

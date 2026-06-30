@@ -3,6 +3,7 @@
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import { revalidatePath } from 'next/cache';
+import { escapeRegex } from '@/lib/utils';
 
 export async function getOrders(source?: 'online' | 'whatsapp', filters?: { search?: string }) {
   await connectDB();
@@ -11,10 +12,11 @@ export async function getOrders(source?: 'online' | 'whatsapp', filters?: { sear
     query.source = source;
   }
   if (filters?.search) {
+    const safeSearch = escapeRegex(filters.search);
     query.$or = [
-      { orderNumber: { $regex: filters.search, $options: 'i' } },
-      { customerName: { $regex: filters.search, $options: 'i' } },
-      { customerPhone: { $regex: filters.search, $options: 'i' } },
+      { orderNumber: { $regex: safeSearch, $options: 'i' } },
+      { customerName: { $regex: safeSearch, $options: 'i' } },
+      { customerPhone: { $regex: safeSearch, $options: 'i' } },
     ];
   }
   const orders = await Order.find(query).sort({ createdAt: -1 });

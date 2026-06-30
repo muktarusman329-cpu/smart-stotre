@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupplier, getSuppliers } from '@/lib/actions/suppliers';
+import { auth } from '@/lib/auth';
 import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/error-handler';
 
@@ -17,6 +18,14 @@ export async function GET(request: NextRequest) {
           retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
         },
         { status: 429 }
+      );
+    }
+
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
@@ -50,6 +59,14 @@ export async function POST(request: NextRequest) {
           retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
         },
         { status: 429 }
+      );
+    }
+
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 

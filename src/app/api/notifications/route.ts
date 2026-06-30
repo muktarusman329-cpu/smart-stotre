@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createNotification, getNotifications } from '@/lib/actions/notifications';
+import { auth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const filters = {
       userId: searchParams.get('userId') || undefined,
@@ -22,6 +31,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const data = await request.json();
     const notification = await createNotification(data);
     return NextResponse.json({ success: true, data: notification });

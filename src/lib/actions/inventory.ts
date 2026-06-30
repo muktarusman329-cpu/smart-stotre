@@ -2,7 +2,7 @@
 
 import connectDB from '@/lib/mongodb';
 import { Product, Category } from '@/models';
-import { generateSKU, generateBarcode } from '@/lib/utils';
+import { generateSKU, generateBarcode, escapeRegex } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
 
 export async function getProducts(filters?: {
@@ -24,10 +24,11 @@ export async function getProducts(filters?: {
   }
 
   if (filters?.search) {
+    const safeSearch = escapeRegex(filters.search);
     query.$or = [
-      { name: { $regex: filters.search, $options: 'i' } },
-      { sku: { $regex: filters.search, $options: 'i' } },
-      { barcode: { $regex: filters.search, $options: 'i' } },
+      { name: { $regex: safeSearch, $options: 'i' } },
+      { sku: { $regex: safeSearch, $options: 'i' } },
+      { barcode: { $regex: safeSearch, $options: 'i' } },
     ];
   }
 

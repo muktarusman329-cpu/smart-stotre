@@ -3,6 +3,7 @@
 import connectDB from '@/lib/mongodb';
 import { Expense } from '@/models';
 import { revalidatePath } from 'next/cache';
+import { escapeRegex } from '@/lib/utils';
 
 export async function getExpenses(filters?: {
   category?: string;
@@ -19,9 +20,10 @@ export async function getExpenses(filters?: {
   }
 
   if (filters?.search) {
+    const safeSearch = escapeRegex(filters.search);
     query.$or = [
-      { description: { $regex: filters.search, $options: 'i' } },
-      { category: { $regex: filters.search, $options: 'i' } },
+      { description: { $regex: safeSearch, $options: 'i' } },
+      { category: { $regex: safeSearch, $options: 'i' } },
     ];
   }
 

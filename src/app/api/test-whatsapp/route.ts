@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { generateThankYouMessage } from '@/lib/whatsapp-utils';
+import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id || session.user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin access required' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { customerName, customerPhone, amount } = body;
 
@@ -17,8 +26,6 @@ export async function POST(request: NextRequest) {
     const testAmount = amount || 100;
     const message = generateThankYouMessage(customerName, testAmount);
 
-    console.log('🧪 Test WhatsApp message request:', { customerName, customerPhone, amount: testAmount });
-
     const result = await sendWhatsAppMessage({
       customerName,
       customerPhone,
@@ -26,15 +33,11 @@ export async function POST(request: NextRequest) {
       amount: testAmount,
     });
 
-    console.log('🧪 Test WhatsApp result:', result);
-
     return NextResponse.json({
       success: true,
       result,
-      testMessage: 'If you see this, the API endpoint is working. Check console for detailed logs.',
     });
   } catch (error) {
-    console.error('🧪 Test WhatsApp API error:', error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

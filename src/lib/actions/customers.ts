@@ -3,6 +3,7 @@
 import connectDB from '@/lib/mongodb';
 import { Customer, Loyalty } from '@/models';
 import { revalidatePath } from 'next/cache';
+import { escapeRegex } from '@/lib/utils';
 
 export async function getCustomers(filters?: {
   search?: string;
@@ -12,10 +13,11 @@ export async function getCustomers(filters?: {
   const query: any = {};
 
   if (filters?.search) {
+    const safeSearch = escapeRegex(filters.search);
     query.$or = [
-      { name: { $regex: filters.search, $options: 'i' } },
-      { email: { $regex: filters.search, $options: 'i' } },
-      { phone: { $regex: filters.search, $options: 'i' } },
+      { name: { $regex: safeSearch, $options: 'i' } },
+      { email: { $regex: safeSearch, $options: 'i' } },
+      { phone: { $regex: safeSearch, $options: 'i' } },
     ];
   }
 

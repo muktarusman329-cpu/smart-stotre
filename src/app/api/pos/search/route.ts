@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchProducts } from '@/lib/actions/pos';
+import { auth } from '@/lib/auth';
 import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/error-handler';
 
@@ -20,17 +21,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q') || '';
 
-    console.log('Search query:', query);
-
     const products = await searchProducts(query);
-    console.log('Search results:', products.length, 'products found');
 
     return NextResponse.json({ success: true, data: products });
   } catch (error) {
-    console.error('Search error:', error);
     const errorResponse = handleApiError(error);
     return NextResponse.json(
       { success: false, error: errorResponse.error },

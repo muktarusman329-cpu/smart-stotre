@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteNotification, markAsRead } from '@/lib/actions/notifications';
+import { auth } from '@/lib/auth';
 
 export async function PUT(
   request: NextRequest,
@@ -7,6 +8,14 @@ export async function PUT(
 ) {
   const { id } = await context.params;
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const notification = await markAsRead(id);
     return NextResponse.json({ success: true, data: notification });
   } catch (error) {
@@ -23,6 +32,14 @@ export async function DELETE(
 ) {
   const { id } = await context.params;
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await deleteNotification(id);
     return NextResponse.json({ success: true });
   } catch (error) {
