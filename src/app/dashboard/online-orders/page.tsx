@@ -28,7 +28,7 @@ export default function OnlineOrdersPage() {
     loadOrders();
   }, []);
 
-  const loadOrders = async (search?: string) => {
+  async function loadOrders(search?: string) {
     try {
       setLoading(true);
       const data = await getOrders('online', search ? { search } : undefined);
@@ -38,7 +38,7 @@ export default function OnlineOrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
