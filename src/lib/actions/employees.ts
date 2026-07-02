@@ -1,15 +1,20 @@
 'use server';
 
 import connectDB from '@/lib/mongodb';
-import { Employee, User } from '@/models';
+import { Employee, User, Branch } from '@/models';
 import { revalidatePath } from 'next/cache';
 import { escapeRegex } from '@/lib/utils';
+import { requireAdmin } from '@/lib/security';
 
 export async function getEmployees(filters?: {
   search?: string;
   department?: string;
 }) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const query: any = { isActive: true };
 
@@ -34,7 +39,11 @@ export async function getEmployees(filters?: {
 }
 
 export async function getEmployeeById(id: string) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const employee = await Employee.findById(id)
     .populate('userId', 'name email phone avatar')
@@ -44,7 +53,14 @@ export async function getEmployeeById(id: string) {
 }
 
 export async function createEmployee(data: any) {
-  await connectDB();
+  // Security check: Only admins can create employees
+  await requireAdmin();
+
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   // First create the user
   const user = await User.create({
@@ -71,7 +87,14 @@ export async function createEmployee(data: any) {
 }
 
 export async function updateEmployee(id: string, data: any) {
-  await connectDB();
+  // Security check: Only admins can update employees
+  await requireAdmin();
+
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const employee = await Employee.findByIdAndUpdate(
     id,
@@ -84,7 +107,14 @@ export async function updateEmployee(id: string, data: any) {
 }
 
 export async function deleteEmployee(id: string) {
-  await connectDB();
+  // Security check: Only admins can delete employees
+  await requireAdmin();
+
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const employee = await Employee.findById(id);
   if (employee) {
@@ -97,7 +127,11 @@ export async function deleteEmployee(id: string) {
 }
 
 export async function updateEmployeePerformance(id: string, performance: any) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const employee = await Employee.findByIdAndUpdate(
     id,
@@ -110,7 +144,11 @@ export async function updateEmployeePerformance(id: string, performance: any) {
 }
 
 export async function updateEmployeeAttendance(id: string, attendance: any) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const employee = await Employee.findByIdAndUpdate(
     id,
@@ -120,4 +158,16 @@ export async function updateEmployeeAttendance(id: string, attendance: any) {
 
   revalidatePath('/dashboard/employees');
   return JSON.parse(JSON.stringify(employee));
+}
+
+export async function getBranches() {
+  const connection = await connectDB();
+
+  if (!connection) {
+    return [];
+  }
+
+  const branches = await Branch.find({ isActive: true }).sort({ name: 1 });
+
+  return JSON.parse(JSON.stringify(branches));
 }

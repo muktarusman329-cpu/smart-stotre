@@ -20,10 +20,14 @@ interface LoyaltyLevel {
 interface Analytics {
   totalCustomers: number;
   totalRevenue: number;
-  averagePurchaseValue: number;
-  customerRetentionRate: number;
+  averageSpend: number;
+  totalPoints: number;
   topSpenders: Customer[];
   frequentCustomers: Customer[];
+  newCustomers: number;
+  returningCustomers: number;
+  returningRate: string;
+  recentPurchases: number;
   loyaltyLevels: LoyaltyLevel[];
 }
 

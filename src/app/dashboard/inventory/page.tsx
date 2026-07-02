@@ -169,7 +169,7 @@ export default function InventoryPage() {
                   {products.map((product: any) => (
                   <tr key={product._id} className="group hover:bg-muted/50 transition-colors">
                     <td className="py-6 px-8">
-                      <div className="flex items-center space-x-4">
+                      <Link href={`/dashboard/inventory/${product._id}`} className="flex items-center space-x-4">
                         <div className="h-14 w-14 rounded-2xl bg-secondary overflow-hidden flex-shrink-0 border border-border">
                           {product.images?.[0] ? (
                             <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
@@ -183,7 +183,7 @@ export default function InventoryPage() {
                           <p className="font-bold text-foreground group-hover:text-primary transition-colors">{product.name}</p>
                           <p className="text-xs font-bold text-muted-foreground mt-1 uppercase tracking-tighter">Unit: {product.unit}</p>
                         </div>
-                      </div>
+                      </Link>
                     </td>
                     <td className="py-6 px-8">
                       <p className="text-xs font-black text-muted-foreground tracking-wider">{product.sku}</p>
@@ -228,9 +228,9 @@ export default function InventoryPage() {
                     </td>
                     <td className="py-6 px-8">
                       <div className="flex items-center justify-end space-x-2">
-                        <button className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
+                        <Link href={`/dashboard/inventory/${product._id}`} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
                           <Edit className="h-5 w-5" />
-                        </button>
+                        </Link>
                         <button className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors">
                           <Trash2 className="h-5 w-5" />
                         </button>

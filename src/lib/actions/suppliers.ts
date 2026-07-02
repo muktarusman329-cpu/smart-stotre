@@ -4,11 +4,16 @@ import connectDB from '@/lib/mongodb';
 import { Supplier } from '@/models';
 import { revalidatePath } from 'next/cache';
 import { escapeRegex } from '@/lib/utils';
+import { requireAdmin, requireManagerOrAdmin } from '@/lib/security';
 
 export async function getSuppliers(filters?: {
   search?: string;
 }) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const query: any = { isActive: true };
 
@@ -28,7 +33,11 @@ export async function getSuppliers(filters?: {
 }
 
 export async function getSupplierById(id: string) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const supplier = await Supplier.findById(id).populate('productsSupplied');
 
@@ -36,7 +45,14 @@ export async function getSupplierById(id: string) {
 }
 
 export async function createSupplier(data: any) {
-  await connectDB();
+  // Security check: Only admins can create suppliers
+  await requireAdmin();
+
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const supplier = await Supplier.create(data);
 
@@ -45,7 +61,14 @@ export async function createSupplier(data: any) {
 }
 
 export async function updateSupplier(id: string, data: any) {
-  await connectDB();
+  // Security check: Only admins can update suppliers
+  await requireAdmin();
+
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const supplier = await Supplier.findByIdAndUpdate(
     id,
@@ -58,7 +81,14 @@ export async function updateSupplier(id: string, data: any) {
 }
 
 export async function deleteSupplier(id: string) {
-  await connectDB();
+  // Security check: Only admins can delete suppliers
+  await requireAdmin();
+
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   await Supplier.findByIdAndUpdate(id, { isActive: false });
 
@@ -67,7 +97,11 @@ export async function deleteSupplier(id: string) {
 }
 
 export async function updateSupplierDebt(id: string, amount: number, operation: 'add' | 'subtract') {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const supplier = await Supplier.findById(id);
 

@@ -4,11 +4,16 @@ import connectDB from '@/lib/mongodb';
 import { Customer, Loyalty } from '@/models';
 import { revalidatePath } from 'next/cache';
 import { escapeRegex } from '@/lib/utils';
+import { requireAdmin, requireManagerOrAdmin } from '@/lib/security';
 
 export async function getCustomers(filters?: {
   search?: string;
 }) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const query: any = {};
 
@@ -27,7 +32,11 @@ export async function getCustomers(filters?: {
 }
 
 export async function getCustomerById(id: string) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const customer = await Customer.findById(id);
 
@@ -35,7 +44,11 @@ export async function getCustomerById(id: string) {
 }
 
 export async function createCustomer(data: any) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const customer = await Customer.create(data);
 
@@ -44,7 +57,11 @@ export async function createCustomer(data: any) {
 }
 
 export async function updateCustomer(id: string, data: any) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const customer = await Customer.findByIdAndUpdate(
     id,
@@ -57,7 +74,11 @@ export async function updateCustomer(id: string, data: any) {
 }
 
 export async function deleteCustomer(id: string) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   await Customer.findByIdAndDelete(id);
 
@@ -66,7 +87,11 @@ export async function deleteCustomer(id: string) {
 }
 
 export async function getTopCustomers(limit: number = 10) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const customers = await Customer.find()
     .sort({ totalSpent: -1 })
@@ -76,7 +101,11 @@ export async function getTopCustomers(limit: number = 10) {
 }
 
 export async function getCustomerAnalytics() {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const totalCustomers = await Customer.countDocuments();
   const customers = await Customer.find();
@@ -85,13 +114,15 @@ export async function getCustomerAnalytics() {
   const averageSpend = totalCustomers > 0 ? totalRevenue / totalCustomers : 0;
   const totalPoints = customers.reduce((sum: number, c: any) => sum + (c.loyaltyPoints || 0), 0);
 
-  const topSpenders = await Customer.find()
+  const topSpenders = JSON.parse(JSON.stringify(await Customer.find()
     .sort({ totalSpent: -1 })
-    .limit(10);
+    .limit(10)
+    .lean()));
 
-  const frequentCustomers = await Customer.find()
+  const frequentCustomers = JSON.parse(JSON.stringify(await Customer.find()
     .sort({ purchaseCount: -1 })
-    .limit(10);
+    .limit(10)
+    .lean()));
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const newCustomers = await Customer.countDocuments({ createdAt: { $gte: thirtyDaysAgo } });
@@ -143,8 +174,12 @@ export async function getCustomerAnalytics() {
 }
 
 export async function getCustomerPurchaseHistory(customerId: string) {
-  await connectDB();
-  
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
+
   const { Sale } = await import('@/models');
   
   const sales = await Sale.find({ customerId })

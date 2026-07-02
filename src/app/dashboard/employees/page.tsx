@@ -4,6 +4,7 @@ import { DashboardHeader } from '@/components/dashboard-header';
 import { getEmployees } from '@/lib/actions/employees';
 import { Plus, Search, DollarSign, Users, Briefcase, Calendar, Edit, Trash2, Mail, Phone, X } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
 export default function EmployeesPage() {
@@ -109,10 +110,10 @@ export default function EmployeesPage() {
             )}
           </div>
 
-          <button className="w-full xl:w-auto flex items-center justify-center space-x-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95">
+          <Link href="/dashboard/employees/new" className="w-full xl:w-auto flex items-center justify-center space-x-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95">
             <Plus className="h-6 w-6" />
             <span>ADD EMPLOYEE</span>
-          </button>
+          </Link>
         </div>
 
         {/* Employees Table */}
@@ -176,10 +177,18 @@ export default function EmployeesPage() {
                     </td>
                     <td className="py-6 px-8 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
+                        <Link href={`/dashboard/employees/${employee._id}`} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
                           <Edit className="h-5 w-5" />
-                        </button>
-                        <button className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors">
+                        </Link>
+                        <button 
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this employee?')) {
+                              // Add delete functionality here
+                              console.log('Delete employee:', employee._id);
+                            }
+                          }}
+                          className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors"
+                        >
                           <Trash2 className="h-5 w-5" />
                         </button>
                       </div>

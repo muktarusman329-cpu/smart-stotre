@@ -8,7 +8,11 @@ import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { generateThankYouMessage } from '@/lib/whatsapp-utils';
 
 export async function searchProducts(query: string) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const safeQuery = escapeRegex(query);
   const products = await Product.find({
@@ -26,7 +30,11 @@ export async function searchProducts(query: string) {
 }
 
 export async function getProductByBarcode(barcode: string) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const product = await Product.findOne({
     barcode,
@@ -59,7 +67,11 @@ export async function createSale(data: {
   branchId?: string;
   notes?: string;
 }) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   // Calculate sale details
   let subtotal = 0;
@@ -284,7 +296,11 @@ export async function createSale(data: {
 }
 
 export async function getSaleById(id: string) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const sale = await Sale.findById(id)
     .populate('customerId', 'name phone email')
@@ -295,7 +311,11 @@ export async function getSaleById(id: string) {
 }
 
 export async function getRecentSales(limit: number = 10) {
-  await connectDB();
+  const connection = await connectDB();
+
+  if (!connection) {
+    throw new Error('Database connection failed');
+  }
 
   const sales = await Sale.find({ status: 'completed' })
     .sort({ createdAt: -1 })

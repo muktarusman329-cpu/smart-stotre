@@ -1,9 +1,10 @@
 'use server';
 
 import connectDB from '@/lib/mongodb';
-import { Product, Category } from '@/models';
+import { Product, Category, Supplier } from '@/models';
 import { generateSKU, generateBarcode, escapeRegex } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
+import { requireAdmin, requireManagerOrAdmin } from '@/lib/security';
 
 export async function getProducts(filters?: {
   category?: string;
@@ -64,6 +65,9 @@ export async function getProductById(id: string) {
 }
 
 export async function createProduct(data: any) {
+  // Security check: Only admins can create products
+  await requireAdmin();
+
   const db = await connectDB();
   
   if (!db) {
@@ -86,6 +90,9 @@ export async function createProduct(data: any) {
 }
 
 export async function updateProduct(id: string, data: any) {
+  // Security check: Only admins can update products
+  await requireAdmin();
+
   const db = await connectDB();
   
   if (!db) {
@@ -103,6 +110,9 @@ export async function updateProduct(id: string, data: any) {
 }
 
 export async function deleteProduct(id: string) {
+  // Security check: Only admins can delete products
+  await requireAdmin();
+
   const db = await connectDB();
   
   if (!db) {
@@ -116,6 +126,9 @@ export async function deleteProduct(id: string) {
 }
 
 export async function updateStock(id: string, quantity: number, operation: 'add' | 'subtract') {
+  // Security check: Manager and admin can update stock
+  await requireManagerOrAdmin();
+
   const db = await connectDB();
   
   if (!db) {
@@ -244,4 +257,16 @@ export async function getExpiringProducts() {
     .sort({ expiryDate: 1 });
 
   return JSON.parse(JSON.stringify(products));
+}
+
+export async function getSuppliers() {
+  const db = await connectDB();
+  
+  if (!db) {
+    return [];
+  }
+
+  const suppliers = await Supplier.find({ isActive: true }).sort({ name: 1 });
+
+  return JSON.parse(JSON.stringify(suppliers));
 }
