@@ -13,3 +13,4 @@ export { default as Order } from './Order';
 export { default as Transaction } from './Transaction';
 export { default as Loyalty } from './Loyalty';
 export { default as WhatsAppMessage } from './WhatsAppMessage';
+export { default as UserActivity } from './UserActivity';

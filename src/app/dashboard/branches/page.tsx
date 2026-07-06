@@ -1,6 +1,7 @@
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getBranches } from '@/lib/actions/branches';
 import { Plus, MapPin, Phone, Mail, Settings, Edit, Trash2, Globe } from 'lucide-react';
+import { connection } from 'next/server';
 
 interface Branch {
   _id: string;
@@ -19,6 +20,7 @@ interface Branch {
 }
 
 export default async function BranchesPage() {
+  await connection();
   const branches = await getBranches() as Branch[];
 
   return (

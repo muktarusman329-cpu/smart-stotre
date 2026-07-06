@@ -2,6 +2,7 @@ import { DashboardHeader } from '@/components/dashboard-header';
 import { getCustomerAnalytics } from '@/lib/actions/customers';
 import { TrendingUp, Users, DollarSign, Award, Repeat, Clock } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { connection } from 'next/server';
 
 interface Customer {
   _id: string;
@@ -32,6 +33,7 @@ interface Analytics {
 }
 
 export default async function CustomerAnalyticsPage() {
+  await connection();
   const analytics = await getCustomerAnalytics() as Analytics;
 
   return (

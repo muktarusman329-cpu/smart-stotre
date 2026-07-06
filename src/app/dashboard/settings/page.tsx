@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { Save, Store, Bell, Shield, CreditCard, Globe, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { getDashboardRoleConfig } from '@/lib/dashboard-role';
+import { Save, Store, Bell, Shield, CreditCard, Globe, AlertCircle, CheckCircle, RefreshCw, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSession } from 'next-auth/react';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
@@ -37,6 +39,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const { data: session, status } = useSession();
+  const role = (session?.user?.role as string | undefined) || 'cashier';
+  const roleConfig = getDashboardRoleConfig(role);
+  const canAccessSettings = roleConfig.canAccessSettings;
 
   const tabs = [
     { id: 'general', name: 'General', icon: Store },
@@ -137,7 +143,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
+  if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
         <DashboardHeader title="System Settings" userRole="admin" />
@@ -145,6 +151,25 @@ export default function SettingsPage() {
           <div className="text-center space-y-4">
             <RefreshCw className="h-10 w-10 text-blue-600 animate-spin mx-auto" />
             <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading settings...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!canAccessSettings) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
+        <DashboardHeader title="System Settings" userRole="admin" />
+        <main className="p-8 flex items-center justify-center min-h-[60vh]">
+          <div className="max-w-md rounded-[2rem] border border-rose-200 bg-white p-8 text-center shadow-lg dark:border-rose-500/20 dark:bg-slate-900">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600">
+              <Lock className="h-7 w-7" />
+            </div>
+            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Admin Access Required</h3>
+            <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
+              Only administrators can view or change system control settings.
+            </p>
           </div>
         </main>
       </div>

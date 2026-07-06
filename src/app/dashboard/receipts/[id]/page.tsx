@@ -1,9 +1,12 @@
 import { DashboardHeader } from '@/components/dashboard-header';
 import { Receipt } from '@/components/receipt';
 import { getSaleById } from '@/lib/actions/pos';
+import { connection } from 'next/server';
 
-export default async function ReceiptPage({ params }: { params: { id: string } }) {
-  const sale = await getSaleById(params.id);
+export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
+  await connection();
+  const { id } = await params;
+  const sale = await getSaleById(id);
 
   if (!sale) {
     return (

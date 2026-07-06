@@ -2,9 +2,11 @@
 
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getProducts, getCategories, getLowStockProducts, getExpiringProducts } from '@/lib/actions/inventory';
-import { Plus, Search, Filter, AlertTriangle, Package, Edit, Trash2, X } from 'lucide-react';
+import { getDashboardRoleConfig } from '@/lib/dashboard-role';
+import { Plus, Search, Filter, AlertTriangle, Package, Edit, Trash2, X, Lock } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 
 export default function InventoryPage() {
@@ -14,6 +16,10 @@ export default function InventoryPage() {
   const [expiringProducts, setExpiringProducts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
+  const role = (session?.user?.role as string | undefined) || 'cashier';
+  const roleConfig = getDashboardRoleConfig(role);
+  const canManageInventory = roleConfig.canManageInventory;
 
   useEffect(() => {
     loadData();
@@ -125,14 +131,23 @@ export default function InventoryPage() {
           </div>
 
           <div className="flex items-center space-x-4 w-full xl:w-auto">
-            <Link href="/dashboard/inventory/new" className="flex-1 xl:flex-none flex items-center justify-center space-x-2 px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-black shadow-lg shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all active:scale-95">
-              <Plus className="h-6 w-6" />
-              <span>ADD PRODUCT</span>
-            </Link>
-            <Link href="/dashboard/inventory/categories" className="flex items-center justify-center space-x-2 px-6 py-4 bg-card border border-border rounded-2xl text-muted-foreground font-bold hover:bg-secondary transition-all shadow-sm">
-              <Package className="h-5 w-5" />
-              <span>Categories</span>
-            </Link>
+            {canManageInventory ? (
+              <>
+                <Link href="/dashboard/inventory/new" className="flex-1 xl:flex-none flex items-center justify-center space-x-2 px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-black shadow-lg shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all active:scale-95">
+                  <Plus className="h-6 w-6" />
+                  <span>ADD PRODUCT</span>
+                </Link>
+                <Link href="/dashboard/inventory/categories" className="flex items-center justify-center space-x-2 px-6 py-4 bg-card border border-border rounded-2xl text-muted-foreground font-bold hover:bg-secondary transition-all shadow-sm">
+                  <Package className="h-5 w-5" />
+                  <span>Categories</span>
+                </Link>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400">
+                <Lock className="h-4 w-4" />
+                Inventory actions are read-only for your role.
+              </div>
+            )}
           </div>
         </div>
 
@@ -227,14 +242,18 @@ export default function InventoryPage() {
                       </p>
                     </td>
                     <td className="py-6 px-8">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Link href={`/dashboard/inventory/${product._id}`} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
-                          <Edit className="h-5 w-5" />
-                        </Link>
-                        <button className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors">
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
+                      {canManageInventory ? (
+                        <div className="flex items-center justify-end space-x-2">
+                          <Link href={`/dashboard/inventory/${product._id}`} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
+                            <Edit className="h-5 w-5" />
+                          </Link>
+                          <button className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors">
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end text-sm font-semibold text-muted-foreground">View only</div>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -51,6 +51,9 @@ export function rateLimit(
   limit: number = 5,
   windowMs: number = 60000 // 1 minute default
 ): { success: boolean; remaining: number; resetTime: number } {
+  if (!identifier || identifier.trim() === '') {
+    return { success: true, remaining: limit, resetTime: Date.now() + windowMs };
+  }
   const data = cleanupExpiredEntries(readRateLimitData());
   const now = Date.now();
   const record = data[identifier];

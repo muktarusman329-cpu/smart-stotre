@@ -2,31 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  Truck, 
-  Wallet, 
-  BarChart3, 
-  Bell, 
-  Scan, 
-  Brain, 
-  Store, 
-  MessageSquare,
-  Settings,
-  Menu,
-  X,
-  ChevronRight,
-  Layers
-} from 'lucide-react';
+import { Menu, X, ChevronRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getNavigationByRole } from '@/config/navigation';
+import { UserRole } from '@/lib/rbac';
 
 interface DashboardSidebarProps {
-  userRole: string;
+  userRole: UserRole;
   userName?: string;
 }
 
@@ -34,6 +18,7 @@ export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) 
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const checkScreenSize = () => setIsLargeScreen(window.innerWidth >= 1024);
@@ -42,27 +27,7 @@ export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) 
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  const navigation = [
-    { name: 'Executive Overview', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'cashier'] },
-    { name: 'Inventory Ledger', href: '/dashboard/inventory', icon: Package, roles: ['admin', 'manager'] },
-    { name: 'POS Terminal', href: '/dashboard/pos', icon: Scan, roles: ['admin', 'manager', 'cashier'] },
-    { name: 'Revenue Intel', href: '/dashboard/sales', icon: BarChart3, roles: ['admin', 'manager'] },
-    { name: 'Digital Fulfilment', href: '/dashboard/online-orders', icon: ShoppingCart, roles: ['admin', 'manager'] },
-    { name: 'Social Commerce', href: '/dashboard/whatsapp-orders', icon: MessageSquare, roles: ['admin', 'manager'] },
-    { name: 'WhatsApp Messages', href: '/dashboard/whatsapp-messages', icon: MessageSquare, roles: ['admin', 'manager'] },
-    { name: 'Supply Chain', href: '/dashboard/suppliers', icon: Truck, roles: ['admin', 'manager'] },
-    { name: 'Human Capital', href: '/dashboard/employees', icon: Users, roles: ['admin'] },
-    { name: 'Customer Base', href: '/dashboard/customers', icon: Users, roles: ['admin', 'manager'] },
-    { name: 'Expenditure', href: '/dashboard/expenses', icon: Wallet, roles: ['admin', 'manager'] },
-    { name: 'Node Network', href: '/dashboard/branches', icon: Store, roles: ['admin'] },
-    { name: 'System Alerts', href: '/dashboard/notifications', icon: Bell, roles: ['admin', 'manager', 'cashier'] },
-    { name: 'Optical Scanner', href: '/dashboard/barcode', icon: Scan, roles: ['admin', 'manager', 'cashier'] },
-    { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: Brain, roles: ['admin', 'manager'] },
-    { name: 'AI Forecasts', href: '/dashboard/ai-predictions', icon: Layers, roles: ['admin', 'manager'] },
-    { name: 'System Control', href: '/dashboard/settings', icon: Settings, roles: ['admin', 'manager'] },
-  ];
-
-  const filteredNavigation = navigation.filter(item => item.roles.includes(userRole));
+  const navigationGroups = getNavigationByRole(userRole);
 
   const NavItem = ({ item }: { item: any }) => {
     const isActive = pathname === item.href;
@@ -74,45 +39,54 @@ export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) 
           "group relative flex items-center px-4 py-3 text-sm font-bold rounded-xl transition-all duration-300 mb-1",
           isActive
             ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-            : "text-muted-foreground hover:bg-accent hover:text-primary"
+            : "text-muted-foreground hover:bg-accent hover:text-primary",
+          isCollapsed && isLargeScreen && "justify-center px-3"
         )}
+        title={isCollapsed && isLargeScreen ? item.name : undefined}
       >
         <motion.div
           whileHover={{ scale: 1.2, rotate: 5 }}
           transition={{ duration: 0.2 }}
+          className={cn(isCollapsed && isLargeScreen ? "mr-0" : "mr-3")}
         >
           <item.icon className={cn(
-            "mr-3 h-5 w-5 transition-transform duration-300",
+            "h-5 w-5 transition-transform duration-300",
             isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-primary"
           )} />
         </motion.div>
         <motion.span 
           className="flex-1 tracking-tight"
-          whileHover={{ x: 5 }}
-          transition={{ duration: 0.2 }}
+          animate={{ 
+            opacity: isCollapsed && isLargeScreen ? 0 : 1,
+            width: isCollapsed && isLargeScreen ? 0 : 'auto'
+          }}
+          transition={{ duration: 0.3 }}
+          whileHover={{ x: isCollapsed && isLargeScreen ? 0 : 5 }}
         >
           {item.name}
         </motion.span>
-        {isActive && (
+        {isActive && !isCollapsed && (
           <motion.div
             layoutId="active-pill"
             className="absolute left-0 w-1 h-6 bg-primary-foreground rounded-full ml-1"
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
         )}
-        <motion.div
-          className={cn(
-            "h-4 w-4 opacity-0 transition-all duration-300 transform translate-x-2",
-            isActive && "hidden"
-          )}
-          whileHover={{ 
-            opacity: 0.4, 
-            translateX: 0,
-            scale: 1.2
-          }}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </motion.div>
+        {!isCollapsed && (
+          <motion.div
+            className={cn(
+              "h-4 w-4 opacity-0 transition-all duration-300 transform translate-x-2",
+              isActive && "hidden"
+            )}
+            whileHover={{ 
+              opacity: 0.4, 
+              translateX: 0,
+              scale: 1.2
+            }}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </motion.div>
+        )}
       </Link>
     );
   };
@@ -143,63 +117,112 @@ export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) 
       {/* Main Sidebar Container */}
       <motion.aside
         initial={{ x: -300, opacity: 0 }}
-        animate={{ x: isOpen ? 0 : (isLargeScreen ? 0 : -300), opacity: 1 }}
+        animate={{ 
+          x: isOpen ? 0 : (isLargeScreen ? 0 : -300), 
+          opacity: 1,
+          width: isCollapsed && isLargeScreen ? 80 : 288
+        }}
         transition={{ duration: 0.4 }}
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-72 bg-card border-r border-border lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 bg-card border-r border-border lg:translate-x-0 overflow-hidden",
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         <div className="flex flex-col h-full p-6">
           {/* Brand Identity */}
           <motion.div 
-            className="flex items-center px-2 mb-10"
+            className="flex items-center justify-between px-2 mb-10"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
           >
-            <motion.div 
-              className="h-12 w-12 mr-3"
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              transition={{ duration: 0.3 }}
-            >
-              <img src="/logo.svg" alt="SmartMart Logo" className="h-full w-full" />
-            </motion.div>
-            <div>
-              <h1 className="text-xl font-black text-foreground tracking-tighter uppercase leading-none">SmartMart</h1>
-              <p className="text-[10px] font-black text-primary tracking-[0.3em] uppercase mt-0.5">Enterprise</p>
+            <div className="flex items-center">
+              <motion.div 
+                className="h-12 w-12 mr-3 flex-shrink-0"
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                <img src="/logo.svg" alt="SmartMart Logo" className="h-full w-full" />
+              </motion.div>
+              <motion.div
+                animate={{ 
+                  opacity: isCollapsed ? 0 : 1,
+                  width: isCollapsed ? 0 : 'auto'
+                }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <h1 className="text-xl font-black text-foreground tracking-tighter uppercase leading-none whitespace-nowrap">SmartMart</h1>
+                <p className="text-[10px] font-black text-primary tracking-[0.3em] uppercase mt-0.5">Enterprise</p>
+              </motion.div>
             </div>
+            
+            {/* Collapse Toggle */}
+            {isLargeScreen && (
+              <motion.button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-2 rounded-lg hover:bg-accent transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <ChevronRight 
+                  className={cn(
+                    "h-5 w-5 text-muted-foreground transition-transform duration-300",
+                    isCollapsed && "rotate-180"
+                  )}
+                />
+              </motion.button>
+            )}
           </motion.div>
 
           {/* Navigation Engine */}
-          <div className="flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
-            <motion.div 
-              className="space-y-1"
-              initial="hidden"
-              animate="visible"
-              variants={{
-                hidden: { opacity: 0 },
-                visible: {
-                  opacity: 1,
-                  transition: {
-                    staggerChildren: 0.05
-                  }
-                }
-              }}
-            >
-              {filteredNavigation.map((item, index) => (
-                <motion.div
-                  key={item.name}
-                  variants={{
-                    hidden: { opacity: 0, x: -20 },
-                    visible: { opacity: 1, x: 0 }
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2 custom-scrollbar space-y-6">
+            {navigationGroups.map((group: any, groupIndex: number) => (
+              <motion.div
+                key={group.title}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: groupIndex * 0.1 }}
+              >
+                <motion.h3 
+                  className="px-4 mb-2 text-xs font-black text-muted-foreground uppercase tracking-widest overflow-hidden"
+                  animate={{ 
+                    opacity: isCollapsed && isLargeScreen ? 0 : 1,
+                    width: isCollapsed && isLargeScreen ? 0 : 'auto'
                   }}
-                  transition={{ duration: 0.3, delay: index * 0.03 }}
+                  transition={{ duration: 0.3 }}
                 >
-                  <NavItem item={item} />
+                  {group.title}
+                </motion.h3>
+                <motion.div 
+                  className="space-y-1"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: {
+                      opacity: 1,
+                      transition: {
+                        staggerChildren: 0.05
+                      }
+                    }
+                  }}
+                >
+                  {group.items.map((item: any, index: number) => (
+                    <motion.div
+                      key={item.name}
+                      variants={{
+                        hidden: { opacity: 0, x: -20 },
+                        visible: { opacity: 1, x: 0 }
+                      }}
+                      transition={{ duration: 0.3, delay: index * 0.03 }}
+                    >
+                      <NavItem item={item} />
+                    </motion.div>
+                  ))}
                 </motion.div>
-              ))}
-            </motion.div>
+              </motion.div>
+            ))}
           </div>
 
           {/* User Control Node */}
@@ -210,11 +233,14 @@ export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) 
             transition={{ duration: 0.4, delay: 0.5 }}
           >
             <motion.div 
-              className="flex items-center p-3 bg-secondary/50 rounded-xl border border-transparent hover:border-border transition-all cursor-pointer group"
+              className={cn(
+                "flex items-center p-3 bg-secondary/50 rounded-xl border border-transparent hover:border-border transition-all cursor-pointer group",
+                isCollapsed && isLargeScreen && "justify-center"
+              )}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <div className="relative mr-3 flex-shrink-0">
+              <div className="relative flex-shrink-0">
                 <motion.div 
                   className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary-700 flex items-center justify-center text-primary-foreground font-black text-lg shadow-lg shadow-primary/20"
                   whileHover={{ rotate: 360, scale: 1.1 }}
@@ -235,10 +261,17 @@ export function DashboardSidebar({ userRole, userName }: DashboardSidebarProps) 
                   }}
                 />
               </div>
-              <div className="flex-1 min-w-0">
+              <motion.div 
+                className="flex-1 min-w-0 ml-3 overflow-hidden"
+                animate={{ 
+                  opacity: isCollapsed && isLargeScreen ? 0 : 1,
+                  width: isCollapsed && isLargeScreen ? 0 : 'auto'
+                }}
+                transition={{ duration: 0.3 }}
+              >
                 <p className="text-sm font-black text-foreground truncate uppercase tracking-tight">{userName || 'Administrator'}</p>
                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">{userRole}</p>
-              </div>
+              </motion.div>
             </motion.div>
           </motion.div>
         </div>

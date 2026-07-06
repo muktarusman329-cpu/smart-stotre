@@ -18,8 +18,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
+        // Normalize email to lowercase for consistency across browsers
+        const email = (credentials.email as string).toLowerCase().trim()
+        
         // Rate limiting based on email
-        const email = credentials.email as string
         const rateLimitResult = checkRateLimit(email, 5, 15 * 60 * 1000) // 5 attempts, 15 minutes
 
         if (!rateLimitResult.allowed) {
@@ -29,17 +31,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         try {
           await connectDB()
-          const user = await User.findOne({ email: credentials.email as string }).select('+password')
+          const user = await User.findOne({ email: email }).select('+password')
 
           if (!user || !user.isActive) {
-            console.error('User not found or inactive')
+            console.error('User not found or inactive for email:', email)
             return null
           }
 
           const isPasswordValid = await user.comparePassword(credentials.password as string)
 
           if (!isPasswordValid) {
-            console.error('Invalid password')
+            console.error('Invalid password for email:', email)
             return null
           }
 
@@ -85,5 +87,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  trustHost: true, // Allow all hosts to prevent browser-specific issues
   secret: process.env.NEXTAUTH_SECRET,
 })

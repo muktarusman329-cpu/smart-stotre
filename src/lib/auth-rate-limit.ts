@@ -1,57 +1,40 @@
 /**
- * Persistent rate limiting for authentication
- * Uses file-based storage to persist across server restarts in development
+ * Optimized in-memory rate limiting for authentication
+ * Much faster than file-based storage for better login performance
  */
 
-import fs from 'fs';
-import path from 'path';
-
-const RATE_LIMIT_FILE = path.join(process.cwd(), '.auth-rate-limit.json');
-
-interface RateLimitData {
-  [email: string]: {
-    count: number;
-    resetTime: number;
-  };
+interface RateLimitRecord {
+  count: number;
+  resetTime: number;
 }
 
-function readRateLimitData(): RateLimitData {
-  try {
-    if (fs.existsSync(RATE_LIMIT_FILE)) {
-      const data = fs.readFileSync(RATE_LIMIT_FILE, 'utf-8');
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error('Error reading rate limit data:', error);
-  }
-  return {};
-}
+// In-memory storage for rate limits
+const rateLimitStore = new Map<string, RateLimitRecord>();
 
-function writeRateLimitData(data: RateLimitData) {
-  try {
-    fs.writeFileSync(RATE_LIMIT_FILE, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error('Error writing rate limit data:', error);
-  }
-}
+// Cleanup interval to prevent memory leaks
+let cleanupInterval: NodeJS.Timeout | null = null;
 
-function cleanupExpiredEntries(data: RateLimitData): RateLimitData {
-  const now = Date.now();
-  const cleaned: RateLimitData = {};
+function startCleanup() {
+  if (cleanupInterval) return;
   
-  for (const [email, record] of Object.entries(data)) {
-    if (now < record.resetTime) {
-      cleaned[email] = record;
+  cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [email, record] of rateLimitStore.entries()) {
+      if (now >= record.resetTime) {
+        rateLimitStore.delete(email);
+      }
     }
-  }
-  
-  return cleaned;
+  }, 5 * 60 * 1000); // Cleanup every 5 minutes
+}
+
+// Start cleanup on module load
+if (typeof window === 'undefined') {
+  startCleanup();
 }
 
 export function checkRateLimit(email: string, maxAttempts: number = 5, windowMs: number = 15 * 60 * 1000): { allowed: boolean; remaining: number; resetTime: number } {
-  const data = cleanupExpiredEntries(readRateLimitData());
   const now = Date.now();
-  const record = data[email];
+  const record = rateLimitStore.get(email);
   
   if (record && now < record.resetTime && record.count >= maxAttempts) {
     return {
@@ -62,32 +45,29 @@ export function checkRateLimit(email: string, maxAttempts: number = 5, windowMs:
   }
   
   if (!record || now >= record.resetTime) {
-    data[email] = {
+    rateLimitStore.set(email, {
       count: 1,
       resetTime: now + windowMs
-    };
+    });
   } else {
-    data[email].count++;
+    record.count++;
   }
   
-  writeRateLimitData(data);
+  const currentRecord = rateLimitStore.get(email)!;
   
   return {
     allowed: true,
-    remaining: maxAttempts - data[email].count,
-    resetTime: data[email].resetTime
+    remaining: maxAttempts - currentRecord.count,
+    resetTime: currentRecord.resetTime
   };
 }
 
 export function resetRateLimit(email: string) {
-  const data = readRateLimitData();
-  delete data[email];
-  writeRateLimitData(data);
+  rateLimitStore.delete(email);
 }
 
 export function getRateLimitStatus(email: string): { count: number; resetTime: number } | null {
-  const data = readRateLimitData();
-  const record = data[email];
+  const record = rateLimitStore.get(email);
   const now = Date.now();
   
   if (record && now < record.resetTime) {

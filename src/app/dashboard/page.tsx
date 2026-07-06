@@ -1,10 +1,14 @@
 'use client';
 
 import { DashboardHeader } from '@/components/dashboard-header';
-import { KPICard } from '@/components/kpi-card';
+import { KPICard } from '@/components/ui/kpi-card';
 import { DashboardCharts } from '@/components/dashboard-charts';
+import { ExecutiveHero } from '@/components/executive-hero';
+import { QuickActions } from '@/components/quick-actions';
+import { AlertCard } from '@/components/alert-card';
 import { getDashboardStats, getSalesData } from '@/lib/actions/dashboard';
 import { formatCurrency } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 import { 
   DollarSign, 
   ShoppingCart, 
@@ -13,10 +17,19 @@ import {
   AlertTriangle, 
   Users,
   Wallet,
-  Bell
+  Bell,
+  Clock,
+  Receipt,
+  BarChart3,
+  Truck,
+  Building2,
+  UserCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { getDashboardRoleConfig } from '@/lib/dashboard-role';
+import { getDashboardCards, UserRole } from '@/lib/rbac';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -41,17 +54,24 @@ const itemVariants = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [stats, setStats] = useState<any>(null);
-  const [salesData, setSalesData] = useState<any>(null);
+  const [salesData, setSalesData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [salesTimeFilter, setSalesTimeFilter] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
+  const role = (session?.user?.role as UserRole) || 'cashier';
+  const roleConfig = getDashboardRoleConfig(role);
+  const dashboardCards = getDashboardCards(role);
 
   useEffect(() => {
     async function loadData() {
+      setLoading(true);
       try {
         const statsData = await getDashboardStats();
         setStats(statsData);
         
-        const sales = await getSalesData('monthly');
+        const sales = await getSalesData(salesTimeFilter);
         setSalesData(sales);
       } catch (error) {
         console.error('Error loading data:', error);
@@ -61,96 +81,303 @@ export default function DashboardPage() {
     }
     
     loadData();
-  }, []);
+  }, [salesTimeFilter]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+          <motion.div
+            className="h-16 w-16 border-4 border-primary border-t-transparent rounded-full mx-auto"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          <p className="mt-4 text-muted-foreground font-semibold">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
+  // Mock data for alerts - in production, this would come from the API
+  const lowStockItems = [
+    { id: '1', name: 'Coca-Cola 50cl', quantity: 2, severity: 'high' as const },
+    { id: '2', name: 'Indomie Chicken', quantity: 5, severity: 'medium' as const },
+    { id: '3', name: 'Bread Sliced', quantity: 8, severity: 'low' as const },
+  ];
+
+  const expiringItems = [
+    { id: '1', name: 'Fresh Milk 1L', quantity: 3, severity: 'high' as const },
+    { id: '2', name: 'Yogurt Pack', quantity: 7, severity: 'medium' as const },
+    { id: '3', name: 'Cheese Slices', quantity: 12, severity: 'low' as const },
+  ];
+
   return (
     <div className="min-h-screen transition-colors duration-300">
-      <DashboardHeader title="Executive Overview" userRole="admin" />
+      <DashboardHeader title={roleConfig.title} userRole={role} />
       
-      <main className="p-8">
-        {/* KPI Cards */}
+      <main className="py-4 sm:py-6 lg:py-8">
+        {roleConfig.showExecutiveHero && (
+          <ExecutiveHero
+            userName={roleConfig.roleLabel}
+            todayRevenue={stats?.todayRevenue || 0}
+            todaySalesCount={stats?.todaySalesCount || 0}
+            onNewSale={() => router.push('/dashboard/pos')}
+            onAddProduct={() => router.push('/dashboard/inventory/new')}
+            onReceiveStock={() => router.push('/dashboard/inventory')}
+          />
+        )}
+
+        <QuickActions
+          onNewSale={() => router.push('/dashboard/pos')}
+          onAddProduct={() => router.push('/dashboard/inventory/new')}
+          onReceiveStock={() => router.push('/dashboard/inventory')}
+          onGenerateReport={() => router.push('/dashboard/sales')}
+          onRecordExpense={() => router.push('/dashboard/expenses')}
+          onPrintReceipt={() => router.push('/dashboard/receipts')}
+          allowedActions={roleConfig.quickActions}
+        />
+
+        {/* KPI Cards - Role Specific */}
         <motion.div 
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
-          <motion.div variants={itemVariants}>
-            <KPICard
-              title="Today's Revenue"
-              value={formatCurrency(stats?.todayRevenue || 0)}
-              change={`${stats?.todaySalesCount || 0} sales today`}
-              icon={DollarSign}
-              iconColor="text-emerald-600"
-            />
-          </motion.div>
-          <motion.div variants={itemVariants}>
-            <KPICard
-              title="Monthly Revenue"
-              value={formatCurrency(stats?.monthlyRevenue || 0)}
-              change={`${stats?.revenueChange >= 0 ? '+' : ''}${(stats?.revenueChange || 0).toFixed(1)}% vs last month`}
-              changeType={stats?.revenueChange >= 0 ? 'positive' : 'negative'}
-              icon={TrendingUp}
-              iconColor="text-blue-600"
-            />
-          </motion.div>
-          <motion.div variants={itemVariants}>
-            <KPICard
-              title="Active Inventory"
-              value={stats?.totalProducts || 0}
-              change={`${stats?.lowStockProducts || 0} items low`}
-              changeType="negative"
-              icon={Package}
-              iconColor="text-purple-600"
-            />
-          </motion.div>
-          <motion.div variants={itemVariants}>
-            <KPICard
-              title="Net Profit"
-              value={formatCurrency(stats?.totalProfit || 0)}
-              change={`Expenses: ${formatCurrency(stats?.totalExpenses || 0)}`}
-              icon={Wallet}
-              iconColor="text-indigo-600"
-            />
-          </motion.div>
+          {dashboardCards.includes('totalRevenue') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Total Revenue"
+                value={formatCurrency(stats?.totalRevenue || 0)}
+                change="All time"
+                icon={DollarSign}
+                iconColor="text-emerald-600"
+                trend={12}
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('todaySales') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Today's Sales"
+                value={formatCurrency(stats?.todayRevenue || 0)}
+                change={`${stats?.todaySalesCount || 0} transactions`}
+                icon={ShoppingCart}
+                iconColor="text-blue-600"
+                trend={8}
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('weeklySales') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Weekly Sales"
+                value={formatCurrency(stats?.weeklyRevenue || 0)}
+                change="This week"
+                icon={BarChart3}
+                iconColor="text-purple-600"
+                trend={5}
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('monthlySales') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Monthly Sales"
+                value={formatCurrency(stats?.monthlyRevenue || 0)}
+                change={`${stats?.revenueChange >= 0 ? '+' : ''}${(stats?.revenueChange || 0).toFixed(1)}% vs last month`}
+                changeType={stats?.revenueChange >= 0 ? 'positive' : 'negative'}
+                icon={TrendingUp}
+                iconColor="text-indigo-600"
+                trend={stats?.revenueChange || 0}
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('totalProducts') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Total Products"
+                value={stats?.totalProducts || 0}
+                change="In catalog"
+                icon={Package}
+                iconColor="text-cyan-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('lowStockProducts') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Low Stock Alert"
+                value={stats?.lowStockProducts || 0}
+                change="Need attention"
+                changeType="negative"
+                icon={AlertTriangle}
+                iconColor="text-orange-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('outOfStockProducts') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Out of Stock"
+                value={stats?.outOfStockProducts || 0}
+                change="Restock required"
+                changeType="negative"
+                icon={AlertTriangle}
+                iconColor="text-red-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('totalEmployees') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Total Employees"
+                value={stats?.totalEmployees || 0}
+                change="Active staff"
+                icon={UserCheck}
+                iconColor="text-blue-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('totalCustomers') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Total Customers"
+                value={stats?.totalCustomers || 0}
+                change="Registered base"
+                icon={Users}
+                iconColor="text-green-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('pendingPurchaseOrders') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Pending Orders"
+                value={stats?.pendingPurchaseOrders || 0}
+                change="Awaiting delivery"
+                icon={Truck}
+                iconColor="text-amber-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('totalSuppliers') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Total Suppliers"
+                value={stats?.totalSuppliers || 0}
+                change="Active partners"
+                icon={Building2}
+                iconColor="text-teal-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('numberOfTransactions') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Transactions"
+                value={stats?.todaySalesCount || 0}
+                change="Today"
+                icon={Receipt}
+                iconColor="text-violet-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('itemsSoldToday') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Items Sold"
+                value={stats?.itemsSoldToday || 0}
+                change="Today"
+                icon={Package}
+                iconColor="text-pink-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('currentShiftSales') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Shift Sales"
+                value={formatCurrency(stats?.shiftRevenue || 0)}
+                change="Current shift"
+                icon={DollarSign}
+                iconColor="text-emerald-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('lowStockAlerts') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Low Stock"
+                value={stats?.lowStockProducts || 0}
+                change="Alerts"
+                changeType="negative"
+                icon={AlertTriangle}
+                iconColor="text-orange-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('outOfStockItems') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Out of Stock"
+                value={stats?.outOfStockProducts || 0}
+                change="Items"
+                changeType="negative"
+                icon={AlertTriangle}
+                iconColor="text-red-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('activeSuppliers') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Active Suppliers"
+                value={stats?.activeSuppliers || 0}
+                change="Partners"
+                icon={Truck}
+                iconColor="text-teal-600"
+              />
+            </motion.div>
+          )}
+          {dashboardCards.includes('customerCount') && (
+            <motion.div variants={itemVariants}>
+              <KPICard
+                title="Customers"
+                value={stats?.totalCustomers || 0}
+                change="Registered"
+                icon={Users}
+                iconColor="text-green-600"
+              />
+            </motion.div>
+          )}
         </motion.div>
 
-        {/* Alert Cards */}
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12"
-        >
+        {roleConfig.showInventoryAlerts && (
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+          >
           <motion.div variants={itemVariants}>
-            <KPICard
+            <AlertCard
               title="Restock Required"
-              value={stats?.lowStockProducts || 0}
-              change="Critical stock levels"
-              changeType="negative"
               icon={AlertTriangle}
               iconColor="text-orange-600"
+              items={lowStockItems}
+              type="restock"
+              onViewAll={() => router.push('/dashboard/inventory')}
             />
           </motion.div>
           <motion.div variants={itemVariants}>
-            <KPICard
+            <AlertCard
               title="Expiry Risk"
-              value={stats?.expiringProducts || 0}
-              change="Expiring < 15 days"
-              changeType="negative"
-              icon={AlertTriangle}
+              icon={Clock}
               iconColor="text-rose-600"
+              items={expiringItems}
+              type="expiry"
+              onViewAll={() => router.push('/dashboard/inventory')}
             />
           </motion.div>
           <motion.div variants={itemVariants}>
@@ -159,47 +386,46 @@ export default function DashboardPage() {
               value={stats?.totalCustomers || 0}
               change="Registered base"
               icon={Users}
-              iconColor="text-teal-600"
+              iconColor="text-cyan-600"
             />
           </motion.div>
-        </motion.div>
+          </motion.div>
+        )}
 
-        {/* Charts */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="mb-12"
-        >
-          <DashboardCharts salesData={salesData || []} />
-        </motion.div>
+        {roleConfig.showCharts && (
+          <DashboardCharts
+            salesData={salesData || []}
+            timeFilter={salesTimeFilter}
+            onTimeFilterChange={setSalesTimeFilter}
+          />
+        )}
 
-        {/* Recent Transactions */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="bg-card rounded-[2.5rem] shadow-lg border border-border overflow-hidden"
-        >
-          <div className="flex items-center justify-between p-8 border-b border-border">
+        {roleConfig.showRecentTransactions && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="bg-card rounded-2xl shadow-lg border border-border overflow-hidden mt-8 hover:shadow-2xl transition-shadow duration-300"
+          >
+          <div className="flex items-center justify-between p-6 border-b border-border">
             <div>
-              <h3 className="text-xl font-black text-foreground tracking-tight uppercase">Recent Transactions</h3>
+              <h3 className="text-xl font-bold text-foreground tracking-tight">Recent Transactions</h3>
               <p className="text-sm font-medium text-muted-foreground mt-1">Real-time update from all terminals</p>
             </div>
-            <button className="px-6 py-3 bg-secondary text-muted-foreground font-bold rounded-xl hover:bg-primary hover:text-primary-foreground transition-all text-sm uppercase tracking-widest hover:scale-105 active:scale-95">
+            <button className="px-6 py-3 bg-secondary text-muted-foreground font-bold rounded-xl hover:bg-primary hover:text-primary-foreground transition-all text-sm uppercase tracking-wider hover:scale-105 active:scale-95">
               Export Log
             </button>
           </div>
-          <div className="overflow-x-auto text-white">
+          <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-secondary/50">
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Transaction ID</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Customer / Entity</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Authorized By</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Net Amount</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Method</th>
-                  <th className="text-left py-6 px-8 text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Timestamp</th>
+                <tr className="bg-secondary/30">
+                  <th className="text-left py-4 px-6 text-xs font-bold text-muted-foreground uppercase tracking-wider">Transaction ID</th>
+                  <th className="text-left py-4 px-6 text-xs font-bold text-muted-foreground uppercase tracking-wider">Customer / Entity</th>
+                  <th className="text-left py-4 px-6 text-xs font-bold text-muted-foreground uppercase tracking-wider">Authorized By</th>
+                  <th className="text-left py-4 px-6 text-xs font-bold text-muted-foreground uppercase tracking-wider">Net Amount</th>
+                  <th className="text-left py-4 px-6 text-xs font-bold text-muted-foreground uppercase tracking-wider">Method</th>
+                  <th className="text-left py-4 px-6 text-xs font-bold text-muted-foreground uppercase tracking-wider">Timestamp</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -211,37 +437,38 @@ export default function DashboardPage() {
                     transition={{ duration: 0.3, delay: 0.6 + (index * 0.05) }}
                     className="group hover:bg-muted/50 transition-colors cursor-pointer"
                   >
-                    <td className="py-6 px-8">
-                      <span className="text-sm font-black text-foreground group-hover:text-primary transition-colors">{transaction.saleNumber}</span>
+                    <td className="py-4 px-6">
+                      <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{transaction.saleNumber}</span>
                     </td>
-                    <td className="py-6 px-8">
+                    <td className="py-4 px-6">
                       <div className="flex items-center space-x-3">
-                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-muted-foreground uppercase group-hover:scale-110 transition-transform">
+                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground uppercase group-hover:scale-110 transition-transform">
                           {(transaction.customerName || 'WI').substring(0, 2)}
                         </div>
-                        <span className="text-sm font-bold text-foreground">{transaction.customerName || 'Walk-in Customer'}</span>
+                        <span className="text-sm font-semibold text-foreground">{transaction.customerName || 'Walk-in Customer'}</span>
                       </div>
                     </td>
-                    <td className="py-6 px-8">
-                      <span className="text-xs font-bold text-muted-foreground">{transaction.cashierId?.name || 'Automated'}</span>
+                    <td className="py-4 px-6">
+                      <span className="text-xs font-semibold text-muted-foreground">{transaction.cashierId?.name || 'Automated'}</span>
                     </td>
-                    <td className="py-6 px-8">
-                      <span className="text-sm font-black text-foreground">{formatCurrency(transaction.total)}</span>
+                    <td className="py-4 px-6">
+                      <span className="text-sm font-bold text-foreground">{formatCurrency(transaction.total)}</span>
                     </td>
-                    <td className="py-6 px-8">
-                      <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/20 group-hover:scale-105 transition-transform">
+                    <td className="py-4 px-6">
+                      <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold uppercase tracking-wider border border-primary/20 group-hover:scale-105 transition-transform">
                         {transaction.paymentMethod}
                       </span>
                     </td>
-                    <td className="py-6 px-8">
-                      <span className="text-xs font-bold text-muted-foreground">{new Date(transaction.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                    <td className="py-4 px-6">
+                      <span className="text-xs font-semibold text-muted-foreground">{new Date(transaction.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                     </td>
                   </motion.tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </motion.div>
+          </motion.div>
+        )}
       </main>
     </div>
   );

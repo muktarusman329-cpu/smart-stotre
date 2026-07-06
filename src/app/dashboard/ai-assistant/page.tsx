@@ -14,7 +14,7 @@ export default function AIAssistantPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Hello! I\'m your AI Business Assistant powered by Google Gemini 1.5 Pro. Ask me anything about your supermarket performance, inventory, sales, or business insights.',
+      content: 'Hello! I\'m your AI Business Assistant powered by DeepSeek on NVIDIA. Ask me anything about your supermarket performance, inventory, sales, or business insights.',
       timestamp: new Date(),
     }
   ]);

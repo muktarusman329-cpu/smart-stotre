@@ -4,7 +4,7 @@ export interface INotification extends Document {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'error' | 'success';
-  category: 'stock' | 'expiry' | 'payment' | 'system' | 'ai_insight';
+  category: 'stock' | 'expiry' | 'payment' | 'system' | 'ai_insight' | 'user_activity';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   userId?: mongoose.Types.ObjectId;
   branchId?: mongoose.Types.ObjectId;
@@ -34,7 +34,7 @@ const NotificationSchema = new Schema<INotification>(
     },
     category: {
       type: String,
-      enum: ['stock', 'expiry', 'payment', 'system', 'ai_insight'],
+      enum: ['stock', 'expiry', 'payment', 'system', 'ai_insight', 'user_activity'],
       required: [true, 'Notification category is required'],
     },
     priority: {

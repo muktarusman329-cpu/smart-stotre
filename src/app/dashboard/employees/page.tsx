@@ -2,15 +2,21 @@
 
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getEmployees } from '@/lib/actions/employees';
-import { Plus, Search, DollarSign, Users, Briefcase, Calendar, Edit, Trash2, Mail, Phone, X } from 'lucide-react';
+import { getDashboardRoleConfig } from '@/lib/dashboard-role';
+import { Plus, Search, DollarSign, Users, Briefcase, Calendar, Edit, Trash2, Mail, Phone, X, Lock } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
+  const role = (session?.user?.role as string | undefined) || 'cashier';
+  const roleConfig = getDashboardRoleConfig(role);
+  const canManageEmployees = roleConfig.canManageEmployees;
 
   useEffect(() => {
     loadEmployees();
@@ -110,10 +116,17 @@ export default function EmployeesPage() {
             )}
           </div>
 
-          <Link href="/dashboard/employees/new" className="w-full xl:w-auto flex items-center justify-center space-x-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95">
-            <Plus className="h-6 w-6" />
-            <span>ADD EMPLOYEE</span>
-          </Link>
+          {canManageEmployees ? (
+            <Link href="/dashboard/employees/new" className="w-full xl:w-auto flex items-center justify-center space-x-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95">
+              <Plus className="h-6 w-6" />
+              <span>ADD EMPLOYEE</span>
+            </Link>
+          ) : (
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300">
+              <Lock className="h-4 w-4" />
+              Employee management is read-only for your role.
+            </div>
+          )}
         </div>
 
         {/* Employees Table */}
@@ -176,22 +189,26 @@ export default function EmployeesPage() {
                       {formatDate(employee.createdAt)}
                     </td>
                     <td className="py-6 px-8 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Link href={`/dashboard/employees/${employee._id}`} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
-                          <Edit className="h-5 w-5" />
-                        </Link>
-                        <button 
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this employee?')) {
-                              // Add delete functionality here
-                              console.log('Delete employee:', employee._id);
-                            }
-                          }}
-                          className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
+                      {canManageEmployees ? (
+                        <div className="flex items-center justify-end space-x-2">
+                          <Link href={`/dashboard/employees/${employee._id}`} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
+                            <Edit className="h-5 w-5" />
+                          </Link>
+                          <button 
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this employee?')) {
+                                // Add delete functionality here
+                                console.log('Delete employee:', employee._id);
+                              }
+                            }}
+                            className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-semibold text-slate-400">View only</span>
+                      )}
                     </td>
                   </tr>
                 ))}

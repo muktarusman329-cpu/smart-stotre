@@ -25,7 +25,7 @@ export default function BarcodeScanner({
   const [isReady, setIsReady] = useState(false);
   const qrCodeRef = useRef<any>(null);
   const scannerElementRef = useRef<HTMLDivElement>(null);
-  const elementId = 'scanner-video-feed';
+  const elementId = useRef(`scanner-video-feed-${Math.random().toString(36).slice(2, 10)}`).current;
 
   useEffect(() => {
     setIsMounted(true);
@@ -56,9 +56,14 @@ export default function BarcodeScanner({
     // Load html5-qrcode dynamically to support SSR environments
     import('html5-qrcode')
       .then((module) => {
-        // Double-check that the element exists and has dimensions
-        const element = document.getElementById(elementId);
-        if (!element || element.clientWidth === 0) {
+        const element = scannerElementRef.current ?? document.getElementById(elementId);
+        if (!element || !(element instanceof HTMLElement)) {
+          console.error('Scanner element is missing from the DOM');
+          setPermissionError('Scanner element not ready. Please refresh the page.');
+          return;
+        }
+
+        if (element.clientWidth === 0 || element.clientHeight === 0) {
           console.error('Scanner element not ready or has no dimensions');
           setPermissionError('Scanner element not ready. Please refresh the page.');
           return;
@@ -111,7 +116,16 @@ export default function BarcodeScanner({
   }, [isReady]);
 
   const startScanner = (scanner: any, cameraId: string) => {
-    if (!scanner) return;
+    const element = scannerElementRef.current ?? document.getElementById(elementId);
+    if (!scanner || !element || !(element instanceof HTMLElement)) {
+      setPermissionError('Scanner element is not available yet. Please try again.');
+      return;
+    }
+
+    if (element.clientWidth === 0 || element.clientHeight === 0) {
+      window.setTimeout(() => startScanner(scanner, cameraId), 150);
+      return;
+    }
 
     setIsScanning(true);
     setPermissionError(null);
