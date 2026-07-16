@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function FinancialReportsPage() {
   const [dateRange, setDateRange] = useState('month');
@@ -64,6 +65,52 @@ export default function FinancialReportsPage() {
     { category: 'Household', amount: 100000, percentage: 8.0 }
   ];
 
+  const handleExportReport = () => {
+    const csvContent = generateFinancialCSV();
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `financial_report_${dateRange}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Financial report exported successfully');
+  };
+
+  const generateFinancialCSV = () => {
+    let csv = 'Financial Report\n';
+    csv += `Date Range,${dateRange}\n`;
+    csv += `Export Date,${new Date().toLocaleString()}\n\n`;
+    
+    csv += 'Financial Metrics\n';
+    csv += 'Metric,Value,Change (%)\n';
+    financialMetrics.forEach(metric => {
+      csv += `${metric.name},${metric.isPercentage ? metric.value + '%' : formatCurrency(metric.value)},${metric.change}\n`;
+    });
+    
+    csv += '\nExpense Breakdown\n';
+    csv += 'Category,Amount,Percentage\n';
+    expenseBreakdown.forEach(item => {
+      csv += `${item.category},${item.amount},${item.percentage}\n`;
+    });
+    
+    csv += '\nRevenue by Category\n';
+    csv += 'Category,Amount,Percentage\n';
+    revenueByCategory.forEach(item => {
+      csv += `${item.category},${item.amount},${item.percentage}\n`;
+    });
+    
+    csv += '\nFinancial Summary\n';
+    csv += 'Category,Amount\n';
+    csv += `Gross Revenue,${formatCurrency(1250000)}\n`;
+    csv += `Total Expenses,${formatCurrency(875000)}\n`;
+    csv += `Net Profit,${formatCurrency(375000)}\n`;
+    
+    return csv;
+  };
+
   return (
     <div className="min-h-screen transition-colors duration-300">
       <DashboardHeader title="Financial Reports" userRole="admin" />
@@ -88,7 +135,7 @@ export default function FinancialReportsPage() {
               Custom Range
             </Button>
           </div>
-          <Button className="bg-primary text-primary-foreground">
+          <Button className="bg-primary text-primary-foreground" onClick={handleExportReport}>
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </Button>

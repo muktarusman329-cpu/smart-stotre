@@ -1,61 +1,37 @@
 'use client';
 
+import { useState } from 'react';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { getProducts, getCategories, getLowStockProducts, getExpiringProducts } from '@/lib/actions/inventory';
 import { getDashboardRoleConfig } from '@/lib/dashboard-role';
 import { Plus, Search, Filter, AlertTriangle, Package, Edit, Trash2, X, Lock } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { useProducts, useDeleteProduct } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
+import { CardSkeleton } from '@/components/loading/CardSkeleton';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { toast } from 'sonner';
 
 export default function InventoryPage() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
-  const [expiringProducts, setExpiringProducts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
   const role = (session?.user?.role as string | undefined) || 'cashier';
   const roleConfig = getDashboardRoleConfig(role);
   const canManageInventory = roleConfig.canManageInventory;
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const { data: products, isLoading, error, refetch } = useProducts({ search: searchQuery });
+  const { data: categories } = useCategories();
+  const deleteProduct = useDeleteProduct();
 
-  const loadData = async (search?: string) => {
-    try {
-      setLoading(true);
-      const [productsData, categoriesData, lowStockData, expiringData] = await Promise.all([
-        getProducts(search ? { search } : undefined),
-        getCategories(),
-        getLowStockProducts(),
-        getExpiringProducts()
-      ]);
-      setProducts(productsData);
-      setCategories(categoriesData);
-      setLowStockProducts(lowStockData);
-      setExpiringProducts(expiringData);
-    } catch (error) {
-      console.error('Error loading inventory data:', error);
-    } finally {
-      setLoading(false);
+  const lowStockProducts = products?.filter((p: any) => p.stockQuantity <= p.minStockLevel) || [];
+  const expiringProducts = products?.filter((p: any) => p.expiryDate && new Date(p.expiryDate) < new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)) || [];
+
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete ${name}?`)) {
+      deleteProduct.mutate(id);
     }
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.length > 0) {
-        loadData(searchQuery);
-      } else if (searchQuery.length === 0) {
-        loadData();
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
@@ -63,6 +39,20 @@ export default function InventoryPage() {
       
       <main className="p-8">
         {/* Quick Stats / Alerts */}
+        <ErrorBoundary>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+              {[1, 2].map((i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-500">Failed to load inventory</p>
+              <button onClick={() => refetch()} className="mt-4 px-4 py-2 bg-primary text-white rounded-xl">Retry</button>
+            </div>
+          ) : (
+            <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           <div className="group bg-card rounded-[2rem] p-8 border border-border shadow-lg hover:shadow-xl transition-all duration-500 overflow-hidden relative">
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -153,12 +143,11 @@ export default function InventoryPage() {
 
         {/* Inventory Table */}
         <div className="bg-card rounded-[2.5rem] shadow-lg border border-border overflow-hidden">
-          {loading ? (
+          {isLoading ? (
             <div className="p-12 text-center">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-              <p className="mt-4 text-sm font-semibold text-muted-foreground">Loading inventory...</p>
+              <CardSkeleton />
             </div>
-          ) : products.length === 0 ? (
+          ) : !products || products.length === 0 ? (
             <div className="p-12 text-center">
               <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <p className="text-lg font-bold text-foreground mb-2">No products found</p>
@@ -181,7 +170,7 @@ export default function InventoryPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {products.map((product: any) => (
+                  {products?.map((product: any) => (
                   <tr key={product._id} className="group hover:bg-muted/50 transition-colors">
                     <td className="py-6 px-8">
                       <Link href={`/dashboard/inventory/${product._id}`} className="flex items-center space-x-4">
@@ -247,7 +236,11 @@ export default function InventoryPage() {
                           <Link href={`/dashboard/inventory/${product._id}`} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
                             <Edit className="h-5 w-5" />
                           </Link>
-                          <button className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors">
+                          <button 
+                            onClick={() => handleDelete(product._id, product.name)}
+                            disabled={deleteProduct.isPending}
+                            className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors"
+                          >
                             <Trash2 className="h-5 w-5" />
                           </button>
                         </div>
@@ -262,6 +255,9 @@ export default function InventoryPage() {
             </div>
           )}
         </div>
+            </>
+          )}
+        </ErrorBoundary>
       </main>
     </div>
   );

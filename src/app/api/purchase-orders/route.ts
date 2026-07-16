@@ -3,39 +3,41 @@ import { auth } from '@/lib/auth';
 import { withAuth } from '@/lib/api-auth';
 import connectDB from '@/lib/mongodb';
 import { handleApiError } from '@/lib/error-handler';
+import { PurchaseOrder } from '@/models';
 
 export async function GET(request: NextRequest) {
   return withAuth(async (req, user) => {
     try {
       await connectDB();
       
-      const searchParams = request.nextUrl.searchParams;
-      const status = searchParams.get('status') || 'all';
+      const { searchParams } = new URL(request.url);
+      const search = searchParams.get('search');
+      const status = searchParams.get('status');
       
-      // Mock data for now - create PurchaseOrder model in production
-      const purchaseOrders = [
-        {
-          id: 'PO-001',
-          supplierName: 'Coca-Cola Bottling Company',
-          orderDate: new Date('2024-01-15'),
-          expectedDelivery: new Date('2024-01-20'),
-          totalAmount: 150000,
-          status: 'pending',
-          itemCount: 45,
-          items: [
-            { name: 'Coca-Cola 50cl', quantity: 100, price: 150 },
-            { name: 'Fanta 50cl', quantity: 50, price: 150 }
-          ]
-        }
-      ];
+      const query: any = {};
+      if (search) {
+        query.$or = [
+          { orderNumber: { $regex: search, $options: 'i' } },
+          { supplierName: { $regex: search, $options: 'i' } },
+        ];
+      }
+      if (status && status !== 'all') {
+        query.status = status;
+      }
       
-      const filtered = status === 'all' 
-        ? purchaseOrders 
-        : purchaseOrders.filter(po => po.status === status);
+      const orders = await PurchaseOrder
+        .find(query)
+        .sort({ createdAt: -1 })
+        .lean();
       
       return NextResponse.json({
         success: true,
-        data: filtered
+        data: orders.map(order => ({
+          ...order,
+          _id: order._id.toString(),
+          id: order._id.toString(),
+          orderDate: order.orderDate,
+        }))
       });
     } catch (error) {
       const errorResponse = handleApiError(error);
@@ -54,17 +56,20 @@ export async function POST(request: NextRequest) {
       
       const data = await request.json();
       
-      const purchaseOrder = {
-        id: `PO-${Date.now()}`,
+      const order = await PurchaseOrder.create({
         ...data,
-        status: 'pending',
-        createdBy: user.id,
-        createdAt: new Date()
-      };
+        createdBy: user.name || 'Unknown',
+        createdById: user.id,
+      });
       
       return NextResponse.json({
         success: true,
-        data: purchaseOrder
+        data: {
+          ...order.toObject(),
+          _id: order._id.toString(),
+          id: order._id.toString(),
+          orderDate: order.orderDate,
+        }
       });
     } catch (error) {
       const errorResponse = handleApiError(error);

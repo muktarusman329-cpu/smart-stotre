@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createNotification, getNotifications } from '@/lib/actions/notifications';
 import { auth } from '@/lib/auth';
+import connectDB from '@/lib/mongodb';
+import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,11 +14,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    await connectDB();
+    const user = await User.findById(session.user.id);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const filters = {
-      userId: searchParams.get('userId') || undefined,
+      userId: session.user.id,
       isRead: searchParams.get('isRead') === 'true' ? true : searchParams.get('isRead') === 'false' ? false : undefined,
       category: searchParams.get('category') || undefined,
+      userRole: user.role,
+      branchId: user.branchId,
     };
 
     const notifications = await getNotifications(filters);
@@ -39,8 +52,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await connectDB();
+    const user = await User.findById(session.user.id);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
     const data = await request.json();
-    const notification = await createNotification(data);
+    const notification = await createNotification({
+      ...data,
+      userId: session.user.id,
+      userRole: user.role,
+      branchId: user.branchId,
+    });
     return NextResponse.json({ success: true, data: notification });
   } catch (error) {
     return NextResponse.json(

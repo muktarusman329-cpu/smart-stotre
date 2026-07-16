@@ -8,6 +8,8 @@ export async function getNotifications(filters?: {
   userId?: string;
   isRead?: boolean;
   category?: string;
+  userRole?: string;
+  branchId?: any;
 }) {
   await connectDB();
 
@@ -23,6 +25,29 @@ export async function getNotifications(filters?: {
 
   if (filters?.category) {
     query.category = filters.category;
+  }
+
+  // Role-based filtering
+  if (filters?.userRole) {
+    // Admins see all notifications
+    // Managers see system, stock, expiry, payment notifications
+    // Cashiers see only their own notifications and system notifications
+    // user_activity category is only for admins
+    if (filters.userRole === 'cashier') {
+      query.$or = [
+        { userId: filters.userId },
+        { category: { $in: ['system', 'stock', 'expiry'] } },
+        { userRole: 'cashier' },
+      ];
+    } else if (filters.userRole === 'manager') {
+      query.$or = [
+        { userId: filters.userId },
+        { category: { $in: ['system', 'stock', 'expiry', 'payment', 'ai_insight'] } },
+        { userRole: { $in: ['manager', 'cashier'] } },
+        { branchId: filters.branchId },
+      ];
+    }
+    // Admin sees everything (no additional filtering)
   }
 
   const notifications = await Notification.find(query)

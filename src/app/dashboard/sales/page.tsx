@@ -35,14 +35,7 @@ export default function SalesAnalyticsPage() {
     profitChange: 0,
     avgChange: 0
   });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchSalesData();
-  }, [period]);
-
   const fetchSalesData = async () => {
-    setLoading(true);
     try {
       const response = await fetch(`/api/sales/analytics?period=${period}`);
       const data = await response.json();
@@ -52,10 +45,12 @@ export default function SalesAnalyticsPage() {
       }
     } catch (error) {
       console.error('Error fetching sales data:', error);
-    } finally {
-      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSalesData();
+  }, [period]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">

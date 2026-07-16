@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
+import { QueryProvider } from "@/components/providers/QueryProvider";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "SmartMart Pro - AI Supermarket Management",
@@ -26,9 +28,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-300" suppressHydrationWarning>
         <SessionProvider>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
+          <QueryProvider>
+            <ThemeProvider>
+              {children}
+            </ThemeProvider>
+            <Toaster position="top-right" richColors />
+          </QueryProvider>
         </SessionProvider>
       </body>
     </html>

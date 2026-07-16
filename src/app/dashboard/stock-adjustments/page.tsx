@@ -7,58 +7,39 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
+import { useStockAdjustments, useApproveStockAdjustment, useRejectStockAdjustment } from '@/hooks/useStockAdjustments';
+import { StockAdjustmentForm } from '@/components/dialogs/StockAdjustmentForm';
+import { CardSkeleton } from '@/components/loading/CardSkeleton';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { toast } from 'sonner';
 
 export default function StockAdjustmentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Mock data for stock adjustments
-  const adjustments = [
-    {
-      id: 'ADJ-001',
-      productId: '1',
-      productName: 'Coca-Cola 50cl',
-      adjustmentType: 'increase',
-      quantity: 50,
-      reason: 'Restock',
-      previousStock: 45,
-      newStock: 95,
-      performedBy: 'John Doe',
-      date: new Date('2024-01-15T10:30:00'),
-      status: 'approved'
-    },
-    {
-      id: 'ADJ-002',
-      productId: '2',
-      productName: 'Indomie Chicken',
-      adjustmentType: 'decrease',
-      quantity: 5,
-      reason: 'Damaged goods',
-      previousStock: 13,
-      newStock: 8,
-      performedBy: 'Jane Smith',
-      date: new Date('2024-01-15T09:15:00'),
-      status: 'pending'
-    },
-    {
-      id: 'ADJ-003',
-      productId: '3',
-      productName: 'Bread Sliced',
-      adjustmentType: 'increase',
-      quantity: 20,
-      reason: 'New delivery',
-      previousStock: 0,
-      newStock: 20,
-      performedBy: 'John Doe',
-      date: new Date('2024-01-14T16:45:00'),
-      status: 'approved'
+  const { data: adjustments, isLoading, error, refetch } = useStockAdjustments({
+    search: searchQuery,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+  });
+  const approveAdjustment = useApproveStockAdjustment();
+  const rejectAdjustment = useRejectStockAdjustment();
+
+  const handleCreateAdjustment = () => {
+    setIsFormOpen(true);
+  };
+
+  const handleApprove = (id: string) => {
+    if (confirm('Are you sure you want to approve this adjustment?')) {
+      approveAdjustment.mutate(id);
     }
-  ];
+  };
 
-  const filteredAdjustments = adjustments.filter(adj => 
-    adj.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    adj.productName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleReject = (id: string) => {
+    if (confirm('Are you sure you want to reject this adjustment?')) {
+      rejectAdjustment.mutate(id);
+    }
+  };
 
   return (
     <div className="min-h-screen transition-colors duration-300">
@@ -89,17 +70,33 @@ export default function StockAdjustmentsPage() {
               <option value="rejected">Rejected</option>
             </select>
           </div>
-          <Button className="bg-primary text-primary-foreground">
+          <Button 
+            className="bg-primary text-primary-foreground"
+            onClick={handleCreateAdjustment}
+          >
             <Plus className="h-4 w-4 mr-2" />
             New Adjustment
           </Button>
         </div>
 
-        {/* Adjustments List */}
-        <div className="space-y-4">
-          {filteredAdjustments.map((adjustment, index) => (
+        <ErrorBoundary>
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <ArrowUpDown className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-500">Failed to load adjustments</p>
+              <Button onClick={() => refetch()} className="mt-4">Retry</Button>
+            </div>
+          ) : (
+          <div className="space-y-4">
+            {adjustments?.map((adjustment: any, index: number) => (
             <motion.div
-              key={adjustment.id}
+              key={adjustment._id || adjustment.id || index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
@@ -110,7 +107,7 @@ export default function StockAdjustmentsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <ArrowUpDown className="h-4 w-4 text-primary" />
-                        <span className="font-bold text-foreground">{adjustment.id}</span>
+                        <span className="font-bold text-foreground">{adjustment._id}</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                           adjustment.status === 'approved' 
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
@@ -156,16 +153,28 @@ export default function StockAdjustmentsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3 w-3" />
-                        <span>{adjustment.date.toLocaleString()}</span>
+                        <span>{adjustment.date ? new Date(adjustment.date).toLocaleString() : "N/A"}</span>
                       </div>
                     </div>
                     {adjustment.status === 'pending' && (
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-green-600 hover:text-green-700"
+                          onClick={() => handleApprove(adjustment._id)}
+                          disabled={approveAdjustment.isPending}
+                        >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Approve
                         </Button>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleReject(adjustment._id)}
+                          disabled={rejectAdjustment.isPending}
+                        >
                           <XCircle className="h-4 w-4 mr-1" />
                           Reject
                         </Button>
@@ -175,15 +184,23 @@ export default function StockAdjustmentsPage() {
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {filteredAdjustments.length === 0 && (
+        {!isLoading && !error && (!adjustments || adjustments.length === 0) && (
           <div className="text-center py-12">
             <ArrowUpDown className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">No stock adjustments found</p>
           </div>
         )}
+        </ErrorBoundary>
+
+        <StockAdjustmentForm
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSuccess={() => refetch()}
+        />
       </main>
     </div>
   );

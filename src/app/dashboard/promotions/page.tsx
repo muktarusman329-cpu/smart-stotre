@@ -7,67 +7,29 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
+import { usePromotions, useDeletePromotion, usePausePromotion, useResumePromotion } from '@/hooks/usePromotions';
+import { CardSkeleton } from '@/components/loading/CardSkeleton';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 export default function PromotionsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Mock data for promotions
-  const promotions = [
-    {
-      id: 'PROM-001',
-      name: 'Weekend Special',
-      description: '20% off all beverages',
-      type: 'percentage',
-      value: 20,
-      startDate: new Date('2024-01-13'),
-      endDate: new Date('2024-01-15'),
-      status: 'active',
-      applicableProducts: ['Beverages'],
-      usageCount: 156
-    },
-    {
-      id: 'PROM-002',
-      name: 'Bulk Purchase Discount',
-      description: 'Buy 5 get 1 free on selected items',
-      type: 'buy_x_get_y',
-      value: { buy: 5, get: 1 },
-      startDate: new Date('2024-01-10'),
-      endDate: new Date('2024-01-31'),
-      status: 'active',
-      applicableProducts: ['Food', 'Snacks'],
-      usageCount: 89
-    },
-    {
-      id: 'PROM-003',
-      name: 'New Year Clearance',
-      description: 'Flat ₦500 off on all items above ₦2000',
-      type: 'fixed',
-      value: 500,
-      startDate: new Date('2024-01-01'),
-      endDate: new Date('2024-01-07'),
-      status: 'expired',
-      applicableProducts: ['All'],
-      usageCount: 423
-    },
-    {
-      id: 'PROM-004',
-      name: 'Customer Loyalty Bonus',
-      description: '10% off for registered customers',
-      type: 'percentage',
-      value: 10,
-      startDate: new Date('2024-01-20'),
-      endDate: new Date('2024-02-20'),
-      status: 'scheduled',
-      applicableProducts: ['All'],
-      usageCount: 0
-    }
-  ];
+  const { data: promotions, isLoading, error, refetch } = usePromotions({ search: searchQuery, status: statusFilter });
+  const deletePromotion = useDeletePromotion();
+  const pausePromotion = usePausePromotion();
+  const resumePromotion = useResumePromotion();
 
-  const filteredPromotions = promotions.filter(promo => 
-    promo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    promo.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleCreatePromotion = () => {
+    router.push('/dashboard/promotions/new');
+  };
+
+  const handleEditPromotion = (id: string) => {
+    router.push(`/dashboard/promotions/${id}`);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -118,17 +80,33 @@ export default function PromotionsPage() {
               <option value="paused">Paused</option>
             </select>
           </div>
-          <Button className="bg-primary text-primary-foreground">
+          <Button 
+            className="bg-primary text-primary-foreground"
+            onClick={handleCreatePromotion}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Create Promotion
           </Button>
         </div>
 
-        {/* Promotions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPromotions.map((promo, index) => (
+        <ErrorBoundary>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <Percent className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-500">Failed to load promotions</p>
+              <Button onClick={() => refetch()} className="mt-4">Retry</Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {promotions?.map((promo: any, index: number) => (
             <motion.div
-              key={promo.id}
+              key={promo._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
@@ -156,7 +134,9 @@ export default function PromotionsPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Period</span>
                       <span className="font-medium text-foreground">
-                        {promo.startDate.toLocaleDateString()} - {promo.endDate.toLocaleDateString()}
+                        {new Date(promo.startDate).toLocaleDateString()} - {
+                          promo.endDate ? new Date(promo.endDate).toLocaleDateString() : "N/A"
+                        } 
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
@@ -170,21 +150,48 @@ export default function PromotionsPage() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleEditPromotion(promo._id)}
+                    >
                       <Edit className="h-4 w-4 mr-1" />
                       Edit
                     </Button>
                     {promo.status === 'active' ? (
-                      <Button variant="outline" size="sm" className="text-yellow-600 hover:text-yellow-700">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-yellow-600 hover:text-yellow-700"
+                        onClick={() => pausePromotion.mutate(promo._id)}
+                        disabled={pausePromotion.isPending}
+                      >
                         Pause
                       </Button>
                     ) : promo.status === 'paused' ? (
-                      <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-green-600 hover:text-green-700"
+                        onClick={() => resumePromotion.mutate(promo._id)}
+                        disabled={resumePromotion.isPending}
+                      >
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Resume
                       </Button>
                     ) : (
-                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this promotion?')) {
+                            deletePromotion.mutate(promo._id);
+                          }
+                        }}
+                        disabled={deletePromotion.isPending}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
@@ -193,14 +200,16 @@ export default function PromotionsPage() {
               </Card>
             </motion.div>
           ))}
-        </div>
+          </div>
+        )}
 
-        {filteredPromotions.length === 0 && (
+        {!isLoading && !error && (!promotions || promotions.length === 0) && (
           <div className="text-center py-12">
             <Percent className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">No promotions found matching your search</p>
           </div>
         )}
+        </ErrorBoundary>
       </main>
     </div>
   );

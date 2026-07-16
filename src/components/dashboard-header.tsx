@@ -220,7 +220,7 @@ export function DashboardHeader({ title, userRole }: DashboardHeaderProps) {
                       className="w-full text-left px-4 py-3 rounded-lg hover:bg-accent transition-colors flex items-center gap-3"
                     >
                       <Wallet className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Record Expense</span>
+                      <span className="text-sm font-medium">Add Expense</span>
                     </button>
                   </div>
                 </motion.div>

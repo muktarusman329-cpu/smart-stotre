@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { History, Search, Filter, Calendar, User, Shield, Download, FileText, AlertTriangle } from 'lucide-react';
+import { History, Search, Filter, Calendar, User, Shield, Download, FileText, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,76 +11,53 @@ export default function ActivityLogsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [userFilter, setUserFilter] = useState('all');
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Mock data for activity logs
-  const activityLogs = [
-    {
-      id: 'LOG-001',
-      action: 'USER_LOGIN',
-      description: 'User John Admin logged in',
-      userId: '1',
-      userName: 'John Admin',
-      userRole: 'admin',
-      ipAddress: '192.168.1.100',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      timestamp: new Date('2024-01-15T10:30:00'),
-      severity: 'info'
-    },
-    {
-      id: 'LOG-002',
-      action: 'PRODUCT_CREATED',
-      description: 'Created new product: Coca-Cola 50cl',
-      userId: '1',
-      userName: 'John Admin',
-      userRole: 'admin',
-      ipAddress: '192.168.1.100',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      timestamp: new Date('2024-01-15T10:45:00'),
-      severity: 'info'
-    },
-    {
-      id: 'LOG-003',
-      action: 'STOCK_ADJUSTMENT',
-      description: 'Stock adjustment: +50 units of Coca-Cola 50cl',
-      userId: '2',
-      userName: 'Jane Manager',
-      userRole: 'manager',
-      ipAddress: '192.168.1.101',
-      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-      timestamp: new Date('2024-01-15T11:00:00'),
-      severity: 'warning'
-    },
-    {
-      id: 'LOG-004',
-      action: 'USER_DELETED',
-      description: 'Deleted user: Alice Cashier',
-      userId: '1',
-      userName: 'John Admin',
-      userRole: 'admin',
-      ipAddress: '192.168.1.100',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      timestamp: new Date('2024-01-15T11:15:00'),
-      severity: 'critical'
-    },
-    {
-      id: 'LOG-005',
-      action: 'SALE_COMPLETED',
-      description: 'Sale completed: ₦2,250 total',
-      userId: '3',
-      userName: 'Bob Cashier',
-      userRole: 'cashier',
-      ipAddress: '192.168.1.102',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      timestamp: new Date('2024-01-15T11:30:00'),
-      severity: 'info'
+  useEffect(() => {
+    fetchActivityLogs();
+  }, [searchQuery, actionFilter, userFilter]);
+
+  const fetchActivityLogs = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (actionFilter !== 'all') params.append('action', actionFilter);
+      if (userFilter !== 'all') params.append('user', userFilter);
+      
+      const response = await fetch(`/api/activity-logs?${params}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setActivityLogs(data.data);
+      } else {
+        setError(data.error || 'Failed to fetch activity logs');
+      }
+    } catch (err) {
+      setError('Failed to connect to server');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const filteredLogs = activityLogs.filter(log => 
-    log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    log.userName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/activity-logs/export', {
+        method: 'POST'
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Logs exported successfully');
+      } else {
+        alert(data.error || 'Failed to export logs');
+      }
+    } catch (err) {
+      alert('Failed to connect to server');
+    }
+  };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -139,15 +116,28 @@ export default function ActivityLogsPage() {
               <option value="cashier">Cashiers</option>
             </select>
           </div>
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4 mr-2" />
             Export Logs
           </Button>
         </div>
 
-        {/* Activity Logs */}
-        <div className="space-y-3">
-          {filteredLogs.map((log, index) => {
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <History className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-500">{error}</p>
+            <Button onClick={fetchActivityLogs} className="mt-4">Retry</Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {activityLogs.map((log, index) => {
             const SeverityIcon = getSeverityIcon(log.severity);
             return (
               <motion.div
@@ -190,10 +180,11 @@ export default function ActivityLogsPage() {
                 </Card>
               </motion.div>
             );
-          })}
-        </div>
+            })}
+          </div>
+        )}
 
-        {filteredLogs.length === 0 && (
+        {!loading && !error && activityLogs.length === 0 && (
           <div className="text-center py-12">
             <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">No activity logs found matching your search</p>

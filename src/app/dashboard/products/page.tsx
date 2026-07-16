@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { Package, Search, Plus, Edit, Trash2, Filter, ArrowUpDown, Eye } from 'lucide-react';
+import { Package, Search, Plus, Edit, Trash2, Filter, ArrowUpDown, Eye, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useProducts, useDeleteProduct, type Product } from '@/hooks/useProducts';
+import { CardSkeleton } from '@/components/loading/CardSkeleton';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -15,79 +18,36 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
 
-  // Mock data for products
-  const products = [
-    {
-      id: '1',
-      name: 'Coca-Cola 50cl',
-      sku: 'CC-50CL',
-      category: 'Beverages',
-      price: 150,
-      cost: 100,
-      stock: 45,
-      lowStockThreshold: 10,
-      barcode: '1234567890123',
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'Indomie Chicken',
-      sku: 'IND-CHK',
-      category: 'Food',
-      price: 100,
-      cost: 75,
-      stock: 8,
-      lowStockThreshold: 15,
-      barcode: '1234567890124',
-      status: 'active'
-    },
-    {
-      id: '3',
-      name: 'Bread Sliced',
-      sku: 'BRD-SLC',
-      category: 'Bakery',
-      price: 800,
-      cost: 600,
-      stock: 0,
-      lowStockThreshold: 5,
-      barcode: '1234567890125',
-      status: 'active'
-    },
-    {
-      id: '4',
-      name: 'Fresh Milk 1L',
-      sku: 'MLK-1L',
-      category: 'Dairy',
-      price: 1200,
-      cost: 900,
-      stock: 25,
-      lowStockThreshold: 10,
-      barcode: '1234567890126',
-      status: 'active'
-    },
-    {
-      id: '5',
-      name: 'Rice 5kg',
-      sku: 'RIC-5KG',
-      category: 'Food',
-      price: 4500,
-      cost: 3500,
-      stock: 30,
-      lowStockThreshold: 10,
-      barcode: '1234567890127',
-      status: 'active'
-    }
-  ];
+  const { data: products, isLoading, error, refetch } = useProducts({
+    search: searchQuery,
+    category: categoryFilter,
+    lowStock: stockFilter === 'low-stock',
+    outOfStock: stockFilter === 'out-of-stock',
+  });
 
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.barcode.includes(searchQuery)
-  );
+  const deleteProduct = useDeleteProduct();
+
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to delete this product?')) {
+      deleteProduct.mutate(id);
+    }
+  };
+
+  const handleAddProduct = () => {
+    router.push('/dashboard/inventory/new');
+  };
+
+  const handleViewProduct = (id: string) => {
+    router.push(`/dashboard/inventory/${id}`);
+  };
+
+  const handleEditProduct = (id: string) => {
+    router.push(`/dashboard/inventory/${id}`);
+  };
 
   const getStockStatus = (product: any) => {
     if (product.stock === 0) return { label: 'Out of Stock', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' };
-    if (product.stock <= product.lowStockThreshold) return { label: 'Low Stock', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' };
+    if (product.stock <= (product.lowStockThreshold ?? 10)) return { label: 'Low Stock', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' };
     return { label: 'In Stock', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
   };
 
@@ -131,76 +91,107 @@ export default function ProductsPage() {
               <option value="out-of-stock">Out of Stock</option>
             </select>
           </div>
-          <Button className="bg-primary text-primary-foreground">
+          <Button className="bg-primary text-primary-foreground" onClick={handleAddProduct}>
             <Plus className="h-4 w-4 mr-2" />
             Add Product
           </Button>
         </div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((product, index) => {
-            const stockStatus = getStockStatus(product);
-            return (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-foreground mb-1">{product.name}</h3>
-                        <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
-                        <p className="text-xs text-muted-foreground">{product.barcode}</p>
+        <ErrorBoundary>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-500">Failed to load products</p>
+              <Button onClick={() => refetch()} className="mt-4">Retry</Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {products?.map((product: any, index: number) => {
+                const stockStatus = getStockStatus(product);
+                return (
+                <motion.div
+                  key={product._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <Card className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-foreground mb-1">{product.name}</h3>
+                          <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
+                          <p className="text-xs text-muted-foreground">{product.barcode}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${stockStatus.color}`}>
+                          {stockStatus.label}
+                        </span>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${stockStatus.color}`}>
-                        {stockStatus.label}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Category</span>
-                        <span className="font-medium text-foreground">{product.category}</span>
+                      
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Category</span>
+                          <span className="font-medium text-foreground">{product.categoryId?.name || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Stock</span>
+                          <span className="font-medium text-foreground">{product.stock} units</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Price</span>
+                          <span className="font-bold text-foreground">{formatCurrency(product.price)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Cost</span>
+                          <span className="font-medium text-foreground">{formatCurrency(product.cost)}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Stock</span>
-                        <span className="font-medium text-foreground">{product.stock} units</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Price</span>
-                        <span className="font-bold text-foreground">{formatCurrency(product.price)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Cost</span>
-                        <span className="font-medium text-foreground">{formatCurrency(product.cost)}</span>
-                      </div>
-                    </div>
 
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleViewProduct(product._id)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleEditProduct(product._id)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDelete(product._id)}
+                          disabled={deleteProduct.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+              })}
+            </div>
+          )}
+        </ErrorBoundary>
 
-        {filteredProducts.length === 0 && (
+        {!isLoading && !error && (!products || products.length === 0) && (
           <div className="text-center py-12">
             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">No products found matching your search</p>

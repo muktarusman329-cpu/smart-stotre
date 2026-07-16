@@ -7,57 +7,32 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
+import { usePurchaseOrders, useApprovePurchaseOrder } from '@/hooks/usePurchaseOrders';
+import { PurchaseOrderForm } from '@/components/dialogs/PurchaseOrderForm';
+import { CardSkeleton } from '@/components/loading/CardSkeleton';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { toast } from 'sonner';
 
 export default function PurchaseOrdersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Mock data for purchase orders
-  const purchaseOrders = [
-    {
-      id: 'PO-001',
-      supplierName: 'Coca-Cola Bottling Company',
-      orderDate: new Date('2024-01-15'),
-      expectedDelivery: new Date('2024-01-20'),
-      totalAmount: 150000,
-      status: 'pending',
-      itemCount: 45,
-      items: [
-        { name: 'Coca-Cola 50cl', quantity: 100, price: 150 },
-        { name: 'Fanta 50cl', quantity: 50, price: 150 }
-      ]
-    },
-    {
-      id: 'PO-002',
-      supplierName: 'Indomie Foods Ltd',
-      orderDate: new Date('2024-01-14'),
-      expectedDelivery: new Date('2024-01-18'),
-      totalAmount: 75000,
-      status: 'approved',
-      itemCount: 200,
-      items: [
-        { name: 'Indomie Chicken', quantity: 200, price: 100 },
-        { name: 'Indomie Onion', quantity: 100, price: 100 }
-      ]
-    },
-    {
-      id: 'PO-003',
-      supplierName: 'Local Bakery',
-      orderDate: new Date('2024-01-13'),
-      expectedDelivery: new Date('2024-01-15'),
-      totalAmount: 24000,
-      status: 'delivered',
-      itemCount: 30,
-      items: [
-        { name: 'Bread Sliced', quantity: 30, price: 800 }
-      ]
+  const { data: purchaseOrders, isLoading, error, refetch } = usePurchaseOrders({
+    search: searchQuery,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+  });
+  const approveOrder = useApprovePurchaseOrder();
+
+  const handleCreateOrder = () => {
+    setIsFormOpen(true);
+  };
+
+  const handleApprove = (id: string) => {
+    if (confirm('Are you sure you want to approve this order?')) {
+      approveOrder.mutate(id);
     }
-  ];
-
-  const filteredOrders = purchaseOrders.filter(order => 
-    order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.supplierName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -99,17 +74,33 @@ export default function PurchaseOrdersPage() {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
-          <Button className="bg-primary text-primary-foreground">
+          <Button 
+            className="bg-primary text-primary-foreground"
+            onClick={handleCreateOrder}
+          >
             <Plus className="h-4 w-4 mr-2" />
             New Purchase Order
           </Button>
         </div>
 
-        {/* Purchase Orders List */}
-        <div className="space-y-4">
-          {filteredOrders.map((order, index) => (
+        <ErrorBoundary>
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <ShoppingCart className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-500">Failed to load purchase orders</p>
+              <Button onClick={() => refetch()} className="mt-4">Retry</Button>
+            </div>
+          ) : (
+          <div className="space-y-4">
+            {purchaseOrders?.map((order: any, index: number) => (
             <motion.div
-              key={order.id}
+              key={order._id || order.id || index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
@@ -120,7 +111,7 @@ export default function PurchaseOrdersPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <ShoppingCart className="h-4 w-4 text-primary" />
-                        <span className="font-bold text-foreground">{order.id}</span>
+                        <span className="font-bold text-foreground">{order.orderNumber || order.id}</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(order.status)}`}>
                           {order.status.toUpperCase()}
                         </span>
@@ -132,11 +123,11 @@ export default function PurchaseOrdersPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Order Date</p>
-                      <p className="font-medium text-sm">{order.orderDate.toLocaleDateString()}</p>
+                      <p className="font-medium text-sm">{order.orderDate ? new Date(order.orderDate).toLocaleDateString() : "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Expected Delivery</p>
-                      <p className="font-medium text-sm">{order.expectedDelivery.toLocaleDateString()}</p>
+                      <p className="font-medium text-sm">{order.expectedDelivery ? new Date(order.expectedDelivery).toLocaleDateString() : "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Items</p>
@@ -154,7 +145,13 @@ export default function PurchaseOrdersPage() {
                         View Details
                       </Button>
                       {order.status === 'pending' && (
-                        <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-green-600 hover:text-green-700"
+                          onClick={() => handleApprove(order._id || order.id)}
+                          disabled={approveOrder.isPending}
+                        >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Approve
                         </Button>
@@ -170,15 +167,23 @@ export default function PurchaseOrdersPage() {
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {filteredOrders.length === 0 && (
+        {!isLoading && !error && (!purchaseOrders || purchaseOrders.length === 0) && (
           <div className="text-center py-12">
             <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">No purchase orders found</p>
           </div>
         )}
+        </ErrorBoundary>
+
+        <PurchaseOrderForm
+          open={isFormOpen}
+          onOpenChange={setIsFormOpen}
+          onSuccess={() => refetch()}
+        />
       </main>
     </div>
   );

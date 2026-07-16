@@ -8,6 +8,7 @@ export interface INotification extends Document {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   userId?: mongoose.Types.ObjectId;
   branchId?: mongoose.Types.ObjectId;
+  userRole?: 'admin' | 'manager' | 'cashier';
   isRead: boolean;
   actionUrl?: string;
   metadata?: Record<string, any>;
@@ -49,6 +50,10 @@ const NotificationSchema = new Schema<INotification>(
     branchId: {
       type: Schema.Types.ObjectId,
       ref: 'Branch',
+    },
+    userRole: {
+      type: String,
+      enum: ['admin', 'manager', 'cashier'],
     },
     isRead: {
       type: Boolean,

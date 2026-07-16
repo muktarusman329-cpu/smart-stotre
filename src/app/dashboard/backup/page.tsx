@@ -6,61 +6,58 @@ import { Database, Download, Upload, Clock, HardDrive, AlertCircle, CheckCircle,
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useBackups, useCreateBackup, useRestoreBackup, useDeleteBackup } from '@/hooks/useBackups';
+import { CardSkeleton } from '@/components/loading/CardSkeleton';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { toast } from 'sonner';
 
 export default function BackupPage() {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
 
-  // Mock data for backups
-  const backups = [
-    {
-      id: 'BKP-001',
-      name: 'Daily Backup - Jan 15, 2024',
-      size: '2.4 GB',
-      createdAt: new Date('2024-01-15T02:00:00'),
-      type: 'automatic',
-      status: 'completed'
-    },
-    {
-      id: 'BKP-002',
-      name: 'Daily Backup - Jan 14, 2024',
-      size: '2.3 GB',
-      createdAt: new Date('2024-01-14T02:00:00'),
-      type: 'automatic',
-      status: 'completed'
-    },
-    {
-      id: 'BKP-003',
-      name: 'Manual Backup - Jan 13, 2024',
-      size: '2.3 GB',
-      createdAt: new Date('2024-01-13T15:30:00'),
-      type: 'manual',
-      status: 'completed'
-    },
-    {
-      id: 'BKP-004',
-      name: 'Weekly Backup - Jan 7, 2024',
-      size: '2.2 GB',
-      createdAt: new Date('2024-01-07T02:00:00'),
-      type: 'automatic',
-      status: 'completed'
-    }
-  ];
+  const { data: backups, isLoading, error, refetch } = useBackups();
+  const createBackup = useCreateBackup();
+  const restoreBackup = useRestoreBackup();
+  const deleteBackup = useDeleteBackup();
 
   const handleBackup = () => {
     setIsBackingUp(true);
     setBackupProgress(0);
     
-    const interval = setInterval(() => {
-      setBackupProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsBackingUp(false);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 500);
+    createBackup.mutate({ name: `Manual Backup - ${new Date().toLocaleDateString()}` }, {
+      onSuccess: () => {
+        const interval = setInterval(() => {
+          setBackupProgress(prev => {
+            if (prev >= 100) {
+              clearInterval(interval);
+              setIsBackingUp(false);
+              refetch();
+              return 100;
+            }
+            return prev + 10;
+          });
+        }, 500);
+      },
+      onError: () => {
+        setIsBackingUp(false);
+      }
+    });
+  };
+
+  const handleRestore = (backupId: string) => {
+    if (confirm('Are you sure you want to restore from this backup? This will replace all current data.')) {
+      restoreBackup.mutate(backupId);
+    }
+  };
+
+  const handleDelete = (backupId: string) => {
+    if (confirm('Are you sure you want to delete this backup?')) {
+      deleteBackup.mutate(backupId);
+    }
+  };
+
+  const handleDownload = (backupId: string) => {
+    toast.info('Download feature coming soon');
   };
 
   return (
@@ -94,14 +91,14 @@ export default function BackupPage() {
                       style={{ width: `${backupProgress}%` }}
                     />
                   </div>
-                  <Button variant="outline" size="sm" className="w-full">
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => setIsBackingUp(false)}>
                     <Pause className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
                 </div>
               ) : (
-                <Button className="w-full bg-primary text-primary-foreground" onClick={handleBackup}>
-                  <Play className="h-4 w-4 mr-2" />
+                <Button className="w-full bg-primary text-primary-foreground" onClick={handleBackup} disabled={createBackup.isPending}>
+                  {createBackup.isPending ? <Pause className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
                   Start Backup
                 </Button>
               )}
@@ -126,7 +123,7 @@ export default function BackupPage() {
                   accept=".backup,.sql,.json"
                   className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                 />
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={() => toast.info('File upload coming soon')}>
                   <Upload className="h-4 w-4 mr-2" />
                   Restore Selected
                 </Button>
@@ -211,45 +208,74 @@ export default function BackupPage() {
         <Card>
           <CardContent className="p-6">
             <h3 className="text-lg font-bold text-foreground mb-4">Recent Backups</h3>
-            <div className="space-y-3">
-              {backups.map((backup, index) => (
-                <motion.div
-                  key={backup.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Database className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{backup.name}</p>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>{backup.size}</span>
-                        <span>•</span>
-                        <span>{backup.createdAt.toLocaleString()}</span>
-                        <span>•</span>
-                        <span className="capitalize">{backup.type}</span>
+            <ErrorBoundary>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <CardSkeleton />
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <Database className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                  <p className="text-red-500">Failed to load backups</p>
+                  <Button onClick={() => refetch()} className="mt-4">Retry</Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {backups?.map((backup: any, index: number) => (
+                  <motion.div
+                    key={backup._id || backup.id || index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Database className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{backup.name}</p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>{backup.size}</span>
+                          <span>•</span>
+                          <span>{new Date(backup.createdAt).toLocaleString()}</span>
+                          <span>•</span>
+                          <span className="capitalize">{backup.type}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Restore
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                      Delete
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDownload(backup._id)}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Download
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleRestore(backup._id)}
+                        disabled={restoreBackup.isPending}
+                      >
+                        Restore
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(backup._id)}
+                        disabled={deleteBackup.isPending}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </motion.div>
+                  ))}
+                </div>
+              )}
+            </ErrorBoundary>
           </CardContent>
         </Card>
       </main>

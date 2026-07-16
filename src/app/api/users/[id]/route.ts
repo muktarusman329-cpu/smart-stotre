@@ -76,7 +76,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       await connectDB();
       
       const userDoc = await User.findByIdAndUpdate(
-        params.id,
+        user._id,
         { isActive: false },
         { new: true }
       ).select('-password');

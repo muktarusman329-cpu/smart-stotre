@@ -3,46 +3,42 @@ import { auth } from '@/lib/auth';
 import { withAuth } from '@/lib/api-auth';
 import connectDB from '@/lib/mongodb';
 import { handleApiError } from '@/lib/error-handler';
-
-// Stock Adjustment interface
-interface IStockAdjustment {
-  productId: string;
-  adjustmentType: 'increase' | 'decrease';
-  quantity: number;
-  reason: string;
-  previousStock: number;
-  newStock: number;
-  performedBy: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: Date;
-}
+import { StockAdjustment } from '@/models';
+import { Product } from '@/models';
 
 export async function GET(request: NextRequest) {
   return withAuth(async (req, user) => {
     try {
       await connectDB();
       
-      // For now, return mock data since we don't have a StockAdjustment model
-      // In production, create a StockAdjustment model and use it
-      const adjustments = [
-        {
-          id: 'ADJ-001',
-          productId: '1',
-          productName: 'Coca-Cola 50cl',
-          adjustmentType: 'increase',
-          quantity: 50,
-          reason: 'Restock',
-          previousStock: 45,
-          newStock: 95,
-          performedBy: user.name || 'Unknown',
-          status: 'approved',
-          createdAt: new Date('2024-01-15T10:30:00')
-        }
-      ];
+      const { searchParams } = new URL(request.url);
+      const search = searchParams.get('search');
+      const status = searchParams.get('status');
+      
+      const query: any = {};
+      if (search) {
+        query.$or = [
+          { productName: { $regex: search, $options: 'i' } },
+          { reason: { $regex: search, $options: 'i' } },
+        ];
+      }
+      if (status && status !== 'all') {
+        query.status = status;
+      }
+      
+      const adjustments = await StockAdjustment
+        .find(query)
+        .sort({ createdAt: -1 })
+        .lean();
       
       return NextResponse.json({
         success: true,
-        data: adjustments
+        data: adjustments.map(adj => ({
+          ...adj,
+          _id: adj._id.toString(),
+          id: adj._id.toString(),
+          date: adj.createdAt,
+        }))
       });
     } catch (error) {
       const errorResponse = handleApiError(error);
@@ -60,7 +56,6 @@ export async function POST(request: NextRequest) {
       await connectDB();
       
       const data = await request.json();
-      const Product = (await import('@/models/Product')).default;
       
       const product = await Product.findById(data.productId);
       if (!product) {
@@ -70,7 +65,7 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      const previousStock = product.stockQuantity;
+      const previousStock = product.stockQuantity || product.stock || 0;
       const newStock = data.adjustmentType === 'increase' 
         ? previousStock + data.quantity 
         : previousStock - data.quantity;
@@ -84,26 +79,33 @@ export async function POST(request: NextRequest) {
       
       // Update product stock
       product.stockQuantity = newStock;
+      if (product.stock !== undefined) {
+        product.stock = newStock;
+      }
       await product.save();
       
-      // Create stock adjustment record (mock for now)
-      const adjustment = {
-        id: `ADJ-${Date.now()}`,
+      // Create stock adjustment record
+      const adjustment = await StockAdjustment.create({
         productId: data.productId,
         productName: product.name,
         adjustmentType: data.adjustmentType,
         quantity: data.quantity,
-        reason: data.reason,
         previousStock,
         newStock,
+        reason: data.reason,
         performedBy: user.name || 'Unknown',
+        performedById: user.id,
         status: 'approved',
-        createdAt: new Date()
-      };
+      });
       
       return NextResponse.json({
         success: true,
-        data: adjustment
+        data: {
+          ...adjustment.toObject(),
+          _id: adjustment._id.toString(),
+          id: adjustment._id.toString(),
+          date: adjustment.createdAt,
+        }
       });
     } catch (error) {
       const errorResponse = handleApiError(error);

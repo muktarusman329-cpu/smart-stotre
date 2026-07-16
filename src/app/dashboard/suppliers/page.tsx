@@ -1,44 +1,26 @@
 'use client';
 
+import { useState } from 'react';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { getSuppliers } from '@/lib/actions/suppliers';
 import { Plus, Search, Truck, Phone, Mail, Package, Edit, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useSuppliers, useDeleteSupplier } from '@/hooks/useSuppliers';
+import { CardSkeleton } from '@/components/loading/CardSkeleton';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { toast } from 'sonner';
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadSuppliers();
-  }, []);
+  const { data: suppliers, isLoading, error, refetch } = useSuppliers({ search: searchQuery });
+  const deleteSupplier = useDeleteSupplier();
 
-  const loadSuppliers = async (search?: string) => {
-    try {
-      setLoading(true);
-      const data = await getSuppliers(search ? { search } : undefined);
-      setSuppliers(data);
-    } catch (error) {
-      console.error('Error loading suppliers:', error);
-    } finally {
-      setLoading(false);
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete ${name}?`)) {
+      deleteSupplier.mutate(id);
     }
   };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.length > 0) {
-        loadSuppliers(searchQuery);
-      } else if (searchQuery.length === 0) {
-        loadSuppliers();
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
@@ -46,12 +28,26 @@ export default function SuppliersPage() {
       
       <main className="p-8">
         {/* Quick Stats */}
+        <ErrorBoundary>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+              {[1, 2, 3].map((i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-500">Failed to load suppliers</p>
+              <button onClick={() => refetch()} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-xl">Retry</button>
+            </div>
+          ) : (
+            <>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
           <div className="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-all duration-500">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[13px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Active Partners</p>
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{suppliers.length}</h3>
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{suppliers?.length || 0}</h3>
                 <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-2">Verified suppliers</p>
               </div>
               <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-2xl">
@@ -64,7 +60,7 @@ export default function SuppliersPage() {
               <div>
                 <p className="text-[13px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Procurement</p>
                 <h3 className="text-3xl font-black text-slate-900 dark:text-white">
-                  {formatCurrency(suppliers.reduce((sum: number, s: any) => sum + (s.totalPurchases || 0), 0))}
+                  {formatCurrency(suppliers?.reduce((sum: number, s: any) => sum + (s.totalPurchases || 0), 0) || 0)}
                 </h3>
                 <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-2">Lifetime volume</p>
               </div>
@@ -78,7 +74,7 @@ export default function SuppliersPage() {
               <div>
                 <p className="text-[13px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Outstanding Debt</p>
                 <h3 className="text-3xl font-black text-slate-900 dark:text-white">
-                  {formatCurrency(suppliers.reduce((sum: number, s: any) => sum + (s.outstandingDebt || 0), 0))}
+                  {formatCurrency(suppliers?.reduce((sum: number, s: any) => sum + (s.outstandingDebt || 0), 0) || 0)}
                 </h3>
                 <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 mt-2">Payables</p>
               </div>
@@ -123,7 +119,7 @@ export default function SuppliersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {suppliers.map((supplier: any) => (
+                {suppliers?.map((supplier: any) => (
                   <tr key={supplier._id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="py-6 px-8">
                       <div className="flex items-center space-x-4">
@@ -167,12 +163,8 @@ export default function SuppliersPage() {
                           <Edit className="h-5 w-5" />
                         </Link>
                         <button 
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this supplier?')) {
-                              // Add delete functionality here
-                              console.log('Delete supplier:', supplier._id);
-                            }
-                          }}
+                          onClick={() => handleDelete(supplier._id, supplier.name)}
+                          disabled={deleteSupplier.isPending}
                           className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors"
                         >
                           <Trash2 className="h-5 w-5" />
@@ -185,6 +177,9 @@ export default function SuppliersPage() {
             </table>
           </div>
         </div>
+            </>
+          )}
+        </ErrorBoundary>
       </main>
     </div>
   );

@@ -181,3 +181,5 @@ export function DashboardCharts({ salesData, timeFilter, onTimeFilterChange }: D
     </motion.div>
   );
 }
+
+export default DashboardCharts;

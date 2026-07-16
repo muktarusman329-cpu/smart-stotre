@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { getCustomers } from '@/lib/actions/customers';
 import { Plus, Search, Edit, Trash2, Award, Phone, Mail } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useCustomers, useDeleteCustomer } from '@/hooks/useCustomers';
+import { CardSkeleton } from '@/components/loading/CardSkeleton';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { toast } from 'sonner';
 
 interface Customer {
   _id: string;
@@ -22,37 +25,16 @@ interface Customer {
 }
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
 
-  const loadCustomers = async (search?: string) => {
-    try {
-      setLoading(true);
-      const data = await getCustomers(search ? { search } : undefined);
-      setCustomers(data);
-    } catch (error) {
-      console.error('Error loading customers:', error);
-    } finally {
-      setLoading(false);
+  const { data: customers, isLoading, error, refetch } = useCustomers({ search: searchQuery });
+  const deleteCustomer = useDeleteCustomer();
+
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete ${name}?`)) {
+      deleteCustomer.mutate(id);
     }
   };
-
-  useEffect(() => {
-    loadCustomers();
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.length > 0) {
-        loadCustomers(searchQuery);
-      } else if (searchQuery.length === 0) {
-        loadCustomers();
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 transition-colors duration-300">
@@ -60,12 +42,26 @@ export default function CustomersPage() {
       
       <main className="p-8">
         {/* Quick Stats */}
+        <ErrorBoundary>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+              {[1, 2, 3].map((i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-500">Failed to load customers</p>
+              <button onClick={() => refetch()} className="mt-4 px-4 py-2 bg-primary text-white rounded-xl">Retry</button>
+            </div>
+          ) : (
+            <>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
           <div className="group bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-all duration-500">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[13px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Database</p>
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{customers.length}</h3>
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{customers?.length || 0}</h3>
                 <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-2">Active accounts</p>
               </div>
               <div className="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-2xl">
@@ -78,7 +74,7 @@ export default function CustomersPage() {
               <div>
                 <p className="text-[13px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Revenue</p>
                 <h3 className="text-3xl font-black text-slate-900 dark:text-white">
-                  {formatCurrency(customers.reduce((sum: number, c: Customer) => sum + c.totalSpent, 0))}
+                  {formatCurrency(customers?.reduce((sum: number, c: Customer) => sum + c.totalSpent, 0) || 0)}
                 </h3>
                 <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-2">Lifetime value</p>
               </div>
@@ -92,7 +88,7 @@ export default function CustomersPage() {
               <div>
                 <p className="text-[13px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Loyalty Points</p>
                 <h3 className="text-3xl font-black text-slate-900 dark:text-white">
-                  {customers.reduce((sum: number, c: Customer) => sum + c.loyaltyPoints, 0)}
+                  {customers?.reduce((sum: number, c: Customer) => sum + c.loyaltyPoints, 0) || 0}
                 </h3>
                 <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-2">Reward pool</p>
               </div>
@@ -138,7 +134,7 @@ export default function CustomersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {customers.map((customer: Customer) => (
+                {customers?.map((customer: Customer) => (
                   <tr key={customer._id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="py-6 px-8">
                       <div className="flex items-center space-x-4">
@@ -193,10 +189,17 @@ export default function CustomersPage() {
                         >
                           <span>View</span>
                         </Link>
-                        <button className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors">
+                        <Link 
+                          href={`/dashboard/customers/${customer._id}/edit`}
+                          className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl text-blue-600 transition-colors"
+                        >
                           <Edit className="h-5 w-5" />
-                        </button>
-                        <button className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors">
+                        </Link>
+                        <button 
+                          className="p-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-rose-500 transition-colors"
+                          onClick={() => handleDelete(customer._id, customer.name)}
+                          disabled={deleteCustomer.isPending}
+                        >
                           <Trash2 className="h-5 w-5" />
                         </button>
                       </div>
@@ -207,6 +210,9 @@ export default function CustomersPage() {
             </table>
           </div>
         </div>
+            </>
+          )}
+        </ErrorBoundary>
       </main>
     </div>
   );

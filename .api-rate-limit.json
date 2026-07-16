@@ -1,6 +1,6 @@
 {
-  "::1-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36": {
-    "count": 3,
-    "resetTime": 1783264043776
+  "::ffff:127.0.0.1-Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:152.0) Gecko/20100101 Firefox/152.0": {
+    "count": 1,
+    "resetTime": 1783963577566
   }
 }
