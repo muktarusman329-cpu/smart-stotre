@@ -205,36 +205,42 @@ export async function createSale(data: {
       }
     } else {
       // Create new customer automatically
-      const newCustomerId = generateCustomerId();
-      const newCustomer = await Customer.create({
-        customerId: newCustomerId,
-        phone: data.customerPhone,
-        name: data.customerName || 'Walk-in Customer',
-        email: data.customerEmail,
-        address: data.customerAddress,
-        customerType: data.customerType || 'walk-in',
-        loyaltyPoints: Math.floor(total / 10),
-        totalSpent: total,
-        purchaseCount: 1,
-        lastPurchaseDate: new Date(),
-        favoriteProducts: saleItems.map(item => item.productId),
-        favoriteCategories: [],
-      });
-      
-      customerId = newCustomer._id.toString();
-      customerName = newCustomer.name ?? customerName;
-      customerPhone = newCustomer.phone;
-      
-      // Create loyalty record
-      await Loyalty.create({
-        customerId: newCustomer._id,
-        pointsBalance: Math.floor(total / 10),
-        pointsEarned: Math.floor(total / 10),
-        pointsRedeemed: 0,
-        level: 'bronze',
-        totalSpent: total,
-        rewards: [],
-      });
+      try {
+        const newCustomerId = generateCustomerId();
+        const newCustomer = await Customer.create({
+          customerId: newCustomerId,
+          phone: data.customerPhone,
+          name: data.customerName || 'Walk-in Customer',
+          email: data.customerEmail,
+          address: data.customerAddress,
+          customerType: data.customerType || 'walk-in',
+          loyaltyPoints: Math.floor(total / 10),
+          totalSpent: total,
+          purchaseCount: 1,
+          lastPurchaseDate: new Date(),
+          favoriteProducts: saleItems.map(item => item.productId),
+          favoriteCategories: [],
+        });
+        
+        customerId = newCustomer._id.toString();
+        customerName = newCustomer.name ?? customerName;
+        customerPhone = newCustomer.phone;
+        
+        // Create loyalty record
+        await Loyalty.create({
+          customerId: newCustomer._id,
+          pointsBalance: Math.floor(total / 10),
+          pointsEarned: Math.floor(total / 10),
+          pointsRedeemed: 0,
+          level: 'bronze',
+          totalSpent: total,
+          rewards: [],
+        });
+      } catch (customerError: any) {
+        console.error('Failed to create customer:', customerError);
+        // Continue with sale even if customer creation fails
+        // Customer will be treated as walk-in
+      }
     }
   }
 

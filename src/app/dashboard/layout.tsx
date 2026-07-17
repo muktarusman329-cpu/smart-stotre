@@ -1,6 +1,5 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { connection } from 'next/server';
 import { DashboardSidebar } from '@/components/dashboard-sidebar';
 import { FloatingActionButton } from '@/components/floating-action-button';
 import { PageTransition } from '@/components/page-transition';
@@ -12,7 +11,6 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await connection();
   const session = await auth();
 
   if (!session) {

@@ -33,28 +33,35 @@ export async function POST(request: NextRequest) {
       } else {
         switch (dateRange) {
           case 'today':
-            start = new Date(now.setHours(0, 0, 0, 0));
-            end = new Date(now.setHours(23, 59, 59, 999));
+            start = new Date(now);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(now);
+            end.setHours(23, 59, 59, 999);
             break;
           case 'week':
-            start = new Date(now.setDate(now.getDate() - 7));
-            end = new Date();
+            start = new Date(now);
+            start.setDate(start.getDate() - 7);
+            end = new Date(now);
             break;
           case 'month':
-            start = new Date(now.setDate(now.getDate() - 30));
-            end = new Date();
+            start = new Date(now);
+            start.setDate(start.getDate() - 30);
+            end = new Date(now);
             break;
           case 'quarter':
-            start = new Date(now.setDate(now.getDate() - 90));
-            end = new Date();
+            start = new Date(now);
+            start.setDate(start.getDate() - 90);
+            end = new Date(now);
             break;
           case 'year':
-            start = new Date(now.setFullYear(now.getFullYear() - 1));
-            end = new Date();
+            start = new Date(now);
+            start.setFullYear(start.getFullYear() - 1);
+            end = new Date(now);
             break;
           default:
-            start = new Date(now.setDate(now.getDate() - 30));
-            end = new Date();
+            start = new Date(now);
+            start.setDate(start.getDate() - 30);
+            end = new Date(now);
         }
       }
       
@@ -66,7 +73,7 @@ export async function POST(request: NextRequest) {
           const sales = await Sale.find({
             createdAt: { $gte: start, $lte: end }
           }).lean();
-          const totalRevenue = sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
+          const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
           const totalTransactions = sales.length;
           reportData = {
             totalRevenue,
@@ -78,13 +85,13 @@ export async function POST(request: NextRequest) {
           
         case 'inventory':
           const products = await Product.find().lean();
-          const totalStock = products.reduce((sum, p) => sum + (p.stockQuantity || p.stock || 0), 0);
-          const totalValue = products.reduce((sum, p) => sum + ((p.stockQuantity || p.stock || 0) * (p.cost || p.price || 0)), 0);
+          const totalStock = products.reduce((sum, p) => sum + (p.stockQuantity || 0), 0);
+          const totalValue = products.reduce((sum, p) => sum + ((p.stockQuantity || 0) * (p.buyingPrice || 0)), 0);
           reportData = {
             totalProducts: products.length,
             totalStock,
             totalValue,
-            lowStockItems: products.filter(p => (p.stockQuantity || p.stock || 0) < 10).length,
+            lowStockItems: products.filter(p => (p.stockQuantity || 0) < (p.minStockLevel || 10)).length,
           };
           break;
           

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import { User } from '@/models';
+import { User, Role } from '@/models';
 import { auth } from '@/lib/auth';
 import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { handleApiError } from '@/lib/error-handler';
@@ -65,16 +65,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate role
-    const validRoles = ['admin', 'manager', 'cashier'];
-    if (!validRoles.includes(role)) {
+    await connectDB();
+
+    // Validate role exists in database
+    const roleExists = await Role.findOne({ name: role.toLowerCase() });
+    if (!roleExists) {
       return NextResponse.json(
         { success: false, error: 'Invalid role' },
         { status: 400 }
       );
     }
-
-    await connectDB();
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       name,
       email,
       password,
-      role,
+      role: role.toLowerCase(),
       phone,
       isActive: true,
     });

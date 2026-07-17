@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      const previousStock = product.stockQuantity || product.stock || 0;
+      const previousStock = product.stockQuantity || 0;
       const newStock = data.adjustmentType === 'increase' 
         ? previousStock + data.quantity 
         : previousStock - data.quantity;
@@ -79,9 +79,6 @@ export async function POST(request: NextRequest) {
       
       // Update product stock
       product.stockQuantity = newStock;
-      if (product.stock !== undefined) {
-        product.stock = newStock;
-      }
       await product.save();
       
       // Create stock adjustment record

@@ -17,3 +17,4 @@ export { default as UserActivity } from './UserActivity';
 export { default as StockAdjustment } from './StockAdjustment';
 export { default as PurchaseOrder } from './PurchaseOrder';
 export { default as Report } from './Report';
+export { default as Role } from './Role';

@@ -1,106 +1,129 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from './auth';
-import { isAdmin, isManagerOrAdmin } from './security';
+import { hasPermission, UserRole } from './rbac';
 
-export async function withAuth(request: NextRequest, handler: (request: NextRequest, session: any) => Promise<NextResponse>) {
+export interface AuthResult {
+  success: boolean;
+  user?: any;
+  error?: string;
+  statusCode?: number;
+}
+
+/**
+ * Authenticate a request and return the user session
+ */
+export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
   try {
     const session = await auth();
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!session?.user) {
+      return {
+        success: false,
+        error: 'Unauthorized - No valid session',
+        statusCode: 401
+      };
     }
 
-    return await handler(request, session);
+    return {
+      success: true,
+      user: session.user
+    };
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Authentication failed' },
-      { status: 401 }
-    );
+    return {
+      success: false,
+      error: 'Authentication failed',
+      statusCode: 401
+    };
   }
 }
 
-export async function withRoleAuth(request: NextRequest, allowedRoles: string[], handler: (request: NextRequest, session: any) => Promise<NextResponse>) {
-  try {
-    const session = await auth();
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    if (!allowedRoles.includes(session.user.role)) {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden: Insufficient permissions' },
-        { status: 403 }
-      );
-    }
-
-    return await handler(request, session);
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Authorization failed' },
-      { status: 403 }
-    );
-  }
+/**
+ * Helper to handle auth errors in API routes
+ */
+export function handleAuthError(authResult: AuthResult): NextResponse {
+  return NextResponse.json(
+    { success: false, error: authResult.error },
+    { status: authResult.statusCode || 401 }
+  );
 }
 
-export async function withAdminAuth(request: NextRequest, handler: (request: NextRequest, session: any) => Promise<NextResponse>) {
-  try {
-    const session = await auth();
+/**
+ * Middleware wrapper for API routes with authentication only
+ */
+export function withAuth(handler: (request: NextRequest, user: any) => Promise<NextResponse>) {
+  return async (request: NextRequest): Promise<NextResponse> => {
+    const authResult = await authenticateRequest(request);
     
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!authResult.success) {
+      return handleAuthError(authResult);
     }
 
-    const adminCheck = await isAdmin();
-    if (!adminCheck) {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden: Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    return await handler(request, session);
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Authorization failed' },
-      { status: 403 }
-    );
-  }
+    return handler(request, authResult.user);
+  };
 }
 
-export async function withManagerOrAdminAuth(request: NextRequest, handler: (request: NextRequest, session: any) => Promise<NextResponse>) {
-  try {
-    const session = await auth();
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+/**
+ * Middleware wrapper with permission check
+ */
+export function withPermission(permissionName: string) {
+  return function(handler: (request: NextRequest, user: any) => Promise<NextResponse>) {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      const authResult = await authenticateRequest(request);
+      
+      if (!authResult.success) {
+        return handleAuthError(authResult);
+      }
 
-    const managerCheck = await isManagerOrAdmin();
-    if (!managerCheck) {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden: Manager or admin access required' },
-        { status: 403 }
-      );
-    }
+      const userRole = authResult.user.role as UserRole;
+      
+      if (!hasPermission(userRole, permissionName)) {
+        return NextResponse.json(
+          { success: false, error: 'Forbidden - Insufficient permissions' },
+          { status: 403 }
+        );
+      }
 
-    return await handler(request, session);
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Authorization failed' },
-      { status: 403 }
-    );
-  }
+      return handler(request, authResult.user);
+    };
+  };
+}
+
+/**
+ * Middleware wrapper with role check
+ */
+export function withRole(allowedRoles: UserRole[]) {
+  return function(handler: (request: NextRequest, user: any) => Promise<NextResponse>) {
+    return async (request: NextRequest): Promise<NextResponse> => {
+      const authResult = await authenticateRequest(request);
+      
+      if (!authResult.success) {
+        return handleAuthError(authResult);
+      }
+
+      const userRole = authResult.user.role as UserRole;
+      
+      if (!allowedRoles.includes(userRole)) {
+        return NextResponse.json(
+          { success: false, error: 'Forbidden - Role not authorized' },
+          { status: 403 }
+        );
+      }
+
+      return handler(request, authResult.user);
+    };
+  };
+}
+
+/**
+ * Admin-only middleware
+ */
+export function withAdmin(handler: (request: NextRequest, user: any) => Promise<NextResponse>) {
+  return withRole(['admin'])(handler);
+}
+
+/**
+ * Manager or Admin middleware
+ */
+export function withManagerOrAdmin(handler: (request: NextRequest, user: any) => Promise<NextResponse>) {
+  return withRole(['admin', 'manager'])(handler);
 }
