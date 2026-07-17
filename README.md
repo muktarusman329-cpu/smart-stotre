@@ -51,40 +51,14 @@ A comprehensive, production-ready supermarket ERP system built with Next.js 15, 
 1. Install dependencies:
 ```bash
 npm install
-```
 
-2. Set up environment variables (create `.env.local`):
-```env
-MONGODB_URI=mongodb://localhost:27017/smartmart
-NEXTAUTH_SECRET=your-secret-key
-NEXTAUTH_URL=http://localhost:3000
-OPENAI_API_KEY=your-openai-api-key
-CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
-CLOUDINARY_API_KEY=your-cloudinary-api-key
-CLOUDINARY_API_SECRET=your-cloudinary-api-secret
-PAYSTACK_PUBLIC_KEY=your-paystack-public-key
-PAYSTACK_SECRET_KEY=your-paystack-secret-key
-```
 
-3. Seed the database with demo data:
-```bash
-npm run seed
-```
-
-4. Run the development server:
+5. Run the development server:
 ```bash
 npm run dev
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000)
-
-### Demo Credentials
-
-After seeding, use these credentials to login:
-
-- **Admin**: admin@smartmart.com / admin123
-- **Manager**: manager@smartmart.com / manager123
-- **Cashier**: cashier@smartmart.com / cashier123
 
 ## Project Structure
 
