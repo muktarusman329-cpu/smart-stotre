@@ -6,12 +6,13 @@ import Category from '@/models/Category';
 import { handleApiError } from '@/lib/error-handler';
 
 // GET single category
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (req, user) => {
     try {
       await connectDB();
       
-      const category = await Category.findById(params.id);
+      const { id } = await params;
+      const category = await Category.findById(id);
       
       if (!category) {
         return NextResponse.json(
@@ -35,15 +36,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT update category
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (req, user) => {
     try {
       await connectDB();
       
       const data = await request.json();
       
+      const { id } = await params;
       const category = await Category.findByIdAndUpdate(
-        params.id,
+        id,
         { ...data, updatedAt: new Date() },
         { new: true, runValidators: true }
       );
@@ -70,13 +72,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE category
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAuth(async (req, user) => {
     try {
       await connectDB();
       
+      const { id } = await params;
       const category = await Category.findByIdAndUpdate(
-        params.id,
+        id,
         { isActive: false },
         { new: true }
       );

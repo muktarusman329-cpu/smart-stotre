@@ -79,12 +79,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   })(request);
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
-      const promotion = await Promotion.findById(params.id);
+      const { id } = await params;
+      const promotion = await Promotion.findById(id);
       
       if (!promotion) {
         return NextResponse.json(
@@ -93,7 +94,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         );
       }
       
-      await Promotion.findByIdAndDelete(params.id);
+      await Promotion.findByIdAndDelete(id);
       
       return NextResponse.json({
         success: true,

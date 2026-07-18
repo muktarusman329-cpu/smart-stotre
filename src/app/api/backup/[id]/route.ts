@@ -4,12 +4,13 @@ import connectDB from '@/lib/mongodb';
 import Backup from '@/models/Backup';
 import { handleApiError } from '@/lib/error-handler';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
-      const backup = await Backup.findById(params.id);
+      const { id } = await params;
+      const backup = await Backup.findById(id);
       
       if (!backup) {
         return NextResponse.json(
@@ -32,12 +33,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   })(request);
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
-      const backup = await Backup.findById(params.id);
+      const { id } = await params;
+      const backup = await Backup.findById(id);
       
       if (!backup) {
         return NextResponse.json(
@@ -58,7 +60,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         setTimeout(async () => {
           try {
             await connectDB();
-            await Backup.findByIdAndUpdate(params.id, { 
+            await Backup.findByIdAndUpdate(id, { 
               status: 'completed',
               completedAt: new Date()
             });
@@ -88,12 +90,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   })(request);
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
-      const backup = await Backup.findById(params.id);
+      const { id } = await params;
+      const backup = await Backup.findById(id);
       
       if (!backup) {
         return NextResponse.json(
@@ -109,7 +112,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         );
       }
       
-      await Backup.findByIdAndDelete(params.id);
+      await Backup.findByIdAndDelete(id);
       
       return NextResponse.json({
         success: true,
