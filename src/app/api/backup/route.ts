@@ -1,37 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { withAuth } from '@/lib/api-auth';
+import { withAdmin } from '@/lib/middleware';
 import connectDB from '@/lib/mongodb';
+import Backup from '@/models/Backup';
 import { handleApiError } from '@/lib/error-handler';
 
 export async function GET(request: NextRequest) {
-  return withAuth(async (req, user) => {
+  return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
-      // Mock data for now - create Backup model in production
-      const backups = [
-        {
-          id: 'BKP-001',
-          name: 'Daily Backup - Jan 15, 2024',
-          size: '2.4 GB',
-          createdAt: new Date('2024-01-15T02:00:00'),
-          type: 'automatic',
-          status: 'completed'
-        },
-        {
-          id: 'BKP-002',
-          name: 'Daily Backup - Jan 14, 2024',
-          size: '2.3 GB',
-          createdAt: new Date('2024-01-14T02:00:00'),
-          type: 'automatic',
-          status: 'completed'
-        }
-      ];
+      const backups = await Backup
+        .find()
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean();
       
       return NextResponse.json({
         success: true,
-        data: backups
+        data: backups.map(backup => ({
+          ...backup,
+          id: backup._id.toString(),
+        }))
       });
     } catch (error) {
       const errorResponse = handleApiError(error);
@@ -44,7 +33,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withAuth(async (req, user) => {
+  return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
@@ -52,26 +41,35 @@ export async function POST(request: NextRequest) {
       const action = data.action || 'create';
       
       if (action === 'create') {
-        // Mock backup creation
-        const backup = {
-          id: `BKP-${Date.now()}`,
+        const backup = await Backup.create({
           name: data.name || `Manual Backup - ${new Date().toLocaleDateString()}`,
-          size: '2.4 GB',
-          createdAt: new Date(),
+          size: data.size || 'Calculating...',
           type: 'manual',
-          status: 'completed',
-          createdBy: user.id
-        };
+          status: 'in_progress',
+          createdBy: user.id,
+          createdByName: user.name || 'Unknown',
+        });
+        
+        // Simulate backup process (in production, this would be a background job)
+        setTimeout(async () => {
+          try {
+            await connectDB();
+            await Backup.findByIdAndUpdate(backup._id, { 
+              status: 'completed',
+              size: data.size || '2.4 GB',
+              completedAt: new Date()
+            });
+          } catch (err) {
+            console.error('Backup completion error:', err);
+          }
+        }, 3000);
         
         return NextResponse.json({
           success: true,
-          data: backup
-        });
-      } else if (action === 'restore') {
-        // Mock restore operation
-        return NextResponse.json({
-          success: true,
-          message: 'Backup restored successfully'
+          data: {
+            ...backup.toObject(),
+            id: backup._id.toString(),
+          }
         });
       }
       

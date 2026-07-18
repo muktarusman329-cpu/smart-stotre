@@ -4,7 +4,6 @@ import connectDB from '@/lib/mongodb';
 import { Supplier } from '@/models';
 import { revalidatePath } from 'next/cache';
 import { escapeRegex } from '@/lib/utils';
-import { requireAdmin, requireManagerOrAdmin } from '@/lib/security';
 
 export async function getSuppliers(filters?: {
   search?: string;

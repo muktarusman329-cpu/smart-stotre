@@ -1,40 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { withAuth } from '@/lib/api-auth';
+import { withAdmin } from '@/lib/middleware';
 import connectDB from '@/lib/mongodb';
+import Promotion from '@/models/Promotion';
 import { handleApiError } from '@/lib/error-handler';
 
 export async function GET(request: NextRequest) {
-  return withAuth(async (req, user) => {
+  return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
       const searchParams = request.nextUrl.searchParams;
       const status = searchParams.get('status') || 'all';
+      const type = searchParams.get('type');
       
-      // Mock data for now - create Promotion model in production
-      const promotions = [
-        {
-          id: 'PROM-001',
-          name: 'Weekend Special',
-          description: '20% off all beverages',
-          type: 'percentage',
-          value: 20,
-          startDate: new Date('2024-01-13'),
-          endDate: new Date('2024-01-15'),
-          status: 'active',
-          applicableProducts: ['Beverages'],
-          usageCount: 156
-        }
-      ];
+      const query: any = {};
+      if (status !== 'all') {
+        query.status = status;
+      }
+      if (type) {
+        query.type = type;
+      }
       
-      const filtered = status === 'all' 
-        ? promotions 
-        : promotions.filter(promo => promo.status === status);
+      const promotions = await Promotion
+        .find(query)
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean();
       
       return NextResponse.json({
         success: true,
-        data: filtered
+        data: promotions.map(promo => ({
+          ...promo,
+          id: promo._id.toString(),
+        }))
       });
     } catch (error) {
       const errorResponse = handleApiError(error);
@@ -47,24 +45,25 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withAuth(async (req, user) => {
+  return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
       const data = await request.json();
       
-      const promotion = {
-        id: `PROM-${Date.now()}`,
+      const promotion = await Promotion.create({
         ...data,
-        status: 'active',
+        status: data.status || 'active',
         createdBy: user.id,
-        createdAt: new Date(),
-        usageCount: 0
-      };
+        createdByName: user.name || 'Unknown',
+      });
       
       return NextResponse.json({
         success: true,
-        data: promotion
+        data: {
+          ...promotion.toObject(),
+          id: promotion._id.toString(),
+        }
       });
     } catch (error) {
       const errorResponse = handleApiError(error);

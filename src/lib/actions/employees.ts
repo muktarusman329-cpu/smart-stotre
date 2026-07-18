@@ -4,7 +4,6 @@ import connectDB from '@/lib/mongodb';
 import { Employee, User, Branch } from '@/models';
 import { revalidatePath } from 'next/cache';
 import { escapeRegex } from '@/lib/utils';
-import { requireAdmin } from '@/lib/security';
 
 export async function getEmployees(filters?: {
   search?: string;

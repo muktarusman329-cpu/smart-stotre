@@ -4,7 +4,6 @@ import connectDB from '@/lib/mongodb';
 import { Product, Category, Supplier } from '@/models';
 import { generateSKU, generateBarcode, escapeRegex } from '@/lib/utils';
 import { revalidatePath } from 'next/cache';
-import { requireAdmin, requireManagerOrAdmin } from '@/lib/security';
 
 export async function getProducts(filters?: {
   category?: string;

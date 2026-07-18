@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { withAuth } from '@/lib/api-auth';
+import { withAuth } from '@/lib/middleware';
 import connectDB from '@/lib/mongodb';
+import ActivityLog from '@/models/ActivityLog';
 import { handleApiError } from '@/lib/error-handler';
 
 export async function GET(request: NextRequest) {
@@ -14,38 +14,30 @@ export async function GET(request: NextRequest) {
       const search = searchParams.get('search') || '';
       const limit = parseInt(searchParams.get('limit') || '50');
       
-      // Mock data for now - create ActivityLog model in production
-      const activityLogs = [
-        {
-          id: 'LOG-001',
-          action: 'USER_LOGIN',
-          description: 'User logged in',
-          userId: user.id,
-          userName: user.name || 'Unknown',
-          userRole: user.role || 'unknown',
-          ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
-          timestamp: new Date(),
-          severity: 'info'
-        }
-      ];
-      
-      let filtered = activityLogs;
-      
+      const query: any = {};
       if (action !== 'all') {
-        filtered = filtered.filter(log => log.action === action);
+        query.action = action;
+      }
+      if (search) {
+        query.$or = [
+          { action: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { userName: { $regex: search, $options: 'i' } },
+        ];
       }
       
-      if (search) {
-        filtered = filtered.filter(log => 
-          log.action.toLowerCase().includes(search.toLowerCase()) ||
-          log.description.toLowerCase().includes(search.toLowerCase()) ||
-          log.userName.toLowerCase().includes(search.toLowerCase())
-        );
-      }
+      const activityLogs = await ActivityLog
+        .find(query)
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
       
       return NextResponse.json({
         success: true,
-        data: filtered.slice(0, limit)
+        data: activityLogs.map(log => ({
+          ...log,
+          id: log._id.toString(),
+        }))
       });
     } catch (error) {
       const errorResponse = handleApiError(error);
@@ -64,19 +56,20 @@ export async function POST(request: NextRequest) {
       
       const data = await request.json();
       
-      const activityLog = {
-        id: `LOG-${Date.now()}`,
+      const activityLog = await ActivityLog.create({
         ...data,
         userId: user.id,
         userName: user.name || 'Unknown',
         userRole: user.role || 'unknown',
         ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
-        timestamp: new Date()
-      };
+      });
       
       return NextResponse.json({
         success: true,
-        data: activityLog
+        data: {
+          ...activityLog.toObject(),
+          id: activityLog._id.toString(),
+        }
       });
     } catch (error) {
       const errorResponse = handleApiError(error);

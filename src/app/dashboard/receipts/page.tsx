@@ -3,10 +3,8 @@ import { Receipt as ReceiptIcon, Printer, Clock } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { getRecentSales } from '@/lib/actions/pos';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { connection } from 'next/server';
 
 export default async function ReceiptsPage() {
-  await connection();
   const sales = await getRecentSales(100);
 
   return (
