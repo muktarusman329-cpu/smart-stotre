@@ -11,11 +11,6 @@
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   },
-  "nixpacks": {
-    "pkgs": [
-      "nodejs-20_x"
-    ]
-  },
   "env": {
     "MONGODB_URI": {
       "description": "MongoDB connection string"
