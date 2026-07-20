@@ -4,12 +4,13 @@ import connectDB from '@/lib/mongodb';
 import Promotion from '@/models/Promotion';
 import { handleApiError } from '@/lib/error-handler';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
-      const promotion = await Promotion.findById(params.id);
+      const { id } = await params;
+      const promotion = await Promotion.findById(id);
       
       if (!promotion) {
         return NextResponse.json(
@@ -32,12 +33,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   })(request);
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return withAdmin(async (req, user) => {
     try {
       await connectDB();
       
-      const promotion = await Promotion.findById(params.id);
+      const { id } = await params;
+      const promotion = await Promotion.findById(id);
       
       if (!promotion) {
         return NextResponse.json(
