@@ -8,7 +8,7 @@ cmds = ["npm install"]
 cmds = ["npm start"]
 
 [variables]
-NODE_VERSION = "20"
+NODE_VERSION = "20.12.0"
 
 [env]
 NODE_OPTIONS = "--max-old-space-size=4096"
